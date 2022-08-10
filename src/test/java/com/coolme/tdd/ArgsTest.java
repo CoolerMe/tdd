@@ -5,32 +5,6 @@ import org.junit.jupiter.api.Test;
 
 public class ArgsTest {
 
-  // single
-  @Test
-  public void should_set_boolean_option_to_true_if_flag_present() {
-    BooleanOption option = Args.parse(BooleanOption.class, "-l");
-    Assertions.assertTrue(option.logging);
-  }
-
-  @Test
-  public void should_set_boolean_option_to_false_if_flag_not_present() {
-    BooleanOption option = Args.parse(BooleanOption.class);
-    Assertions.assertFalse(option.logging);
-  }
-
-
-  // string -d /usr/log
-  @Test
-  public void should_set_string_option_if_flag_present() {
-    StringOption option = Args.parse(StringOption.class, "-d", "/usr/logs");
-    Assertions.assertEquals(option.directory, "/usr/logs");
-  }
-
-  @Test
-  public void should_parse_int_if_flag_present() {
-    IntOption option = Args.parse(IntOption.class, "-p", "8080");
-    Assertions.assertEquals(option.port, 8080);
-  }
 
   // multi
   @Test
@@ -40,30 +14,24 @@ public class ArgsTest {
     Assertions.assertEquals(option.directory, "/usr/log");
     Assertions.assertTrue(option.logging);
   }
-  // sad path
-  // TODO boolean -l 1 | -l t f
-  // TODO string -d | -d /usr/log /usr/conf
-  // TODO int -p | -p 8080 8081
-  // default value
-  // TODO boolean : false
-  // TODO int 0
-  // TODO string ""
+
+  @Test
+  public void should_throw_illegal_option_exception_if_no_annotation_present() {
+    IllegalOptionException exception = Assertions.assertThrows(
+        IllegalOptionException.class,
+        () -> Args.parse(MultiOptionWithoutAnnotation.class, "-l", "-p", "8080", "-d", "/usr/log"));
+    Assertions.assertEquals("port", exception.getParameter());
+  }
+
 
   public record MultiOption(@Option("l") boolean logging, @Option("d") String directory,
                             @Option("p") int port) {
 
   }
 
-  public record BooleanOption(@Option("l") boolean logging) {
-
-  }
-
-  public record StringOption(@Option("d") String directory) {
-
-  }
-
-  public record IntOption(@Option("p") int port) {
-
+  public record MultiOptionWithoutAnnotation(@Option("l") boolean logging,
+                                             @Option("d") String directory,
+                                             int port) {
 
   }
 }
