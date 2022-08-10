@@ -23,28 +23,28 @@ class SingleValueParser<T> implements OptionParser<T> {
       return defaultValue;
     }
 
-    int size = getOptionSize(arguments, index);
+    List<String> values = valuesFrom(arguments, index);
 
-    if (size < 1) {
+    if (values.size() < 1) {
       throw new InsufficientArgumentsException(option.value());
     }
 
-    if (size > 1) {
+    if (values.size() > 1) {
       throw new TooManyArgumentsException(option.value());
     }
 
-    String value = arguments.get(index + 1);
+    String value = values.get(0);
+
     return parser.apply(value);
   }
 
-  private static int getOptionSize(List<String> arguments, int index) {
+  private static List<String> valuesFrom(List<String> arguments, int index) {
     int followedIndex = IntStream.range(index + 1, arguments.size())
         .filter(it -> arguments.get(it).startsWith("-"))
         .findFirst().orElse(arguments.size());
 
     List<String> values = arguments.subList(index + 1, followedIndex);
-
-    return values.size();
+    return values;
   }
 
 }
