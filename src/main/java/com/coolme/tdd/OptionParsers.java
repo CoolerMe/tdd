@@ -1,5 +1,9 @@
 package com.coolme.tdd;
 
+import com.coolme.tdd.exception.IllegalOptionException;
+import com.coolme.tdd.exception.IllegalValueException;
+import com.coolme.tdd.exception.InsufficientArgumentsException;
+import com.coolme.tdd.exception.TooManyArgumentsException;
 import java.lang.reflect.Parameter;
 import java.util.List;
 import java.util.Optional;
@@ -10,7 +14,7 @@ import java.util.stream.IntStream;
 class OptionParsers<T> {
 
   public static OptionParser<Boolean> bool() {
-    return (arguments, option) -> values(arguments, option, 0).map(it -> true).orElse(false);
+    return (arguments, option) -> values(arguments, option, 0).isPresent();
   }
 
   public static <T> OptionParser<T> unary(T defaultValue, Function<String, T> parser) {
@@ -45,14 +49,11 @@ class OptionParsers<T> {
 
   private static Optional<List<String>> values(List<String> arguments, Option option,
       int expectedSize) {
+    return values(arguments, option)
+        .map(strings -> checkSize(option, expectedSize, strings));
+  }
 
-    int index = arguments.indexOf("-" + option.value());
-
-    if (index == -1) {
-      return Optional.empty();
-    }
-
-    List<String> values = values(arguments, index);
+  private static List<String> checkSize(Option option, int expectedSize, List<String> values) {
     if (values.size() < expectedSize) {
       throw new InsufficientArgumentsException(option.value());
     }
@@ -61,7 +62,8 @@ class OptionParsers<T> {
       throw new TooManyArgumentsException(option.value());
     }
 
-    return Optional.of(values);
+    return values;
+
   }
 
 
@@ -76,7 +78,8 @@ class OptionParsers<T> {
 
   private static List<String> values(List<String> arguments, int index) {
     int followedIndex = IntStream.range(index + 1, arguments.size())
-        .filter(it -> arguments.get(it).startsWith("-")).findFirst().orElse(arguments.size());
+        .filter(it -> arguments.get(it).matches("^-[a-zA-z-]+$"))
+        .findFirst().orElse(arguments.size());
 
     return arguments.subList(index + 1, followedIndex);
   }

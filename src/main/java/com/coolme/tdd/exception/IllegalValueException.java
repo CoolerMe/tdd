@@ -1,4 +1,4 @@
-package com.coolme.tdd;
+package com.coolme.tdd.exception;
 
 /**
  * @author coolme
@@ -8,8 +8,9 @@ public class IllegalValueException extends RuntimeException {
   private String optionValue;
   private String value;
 
-  public IllegalValueException() {
-
+  public IllegalValueException(String optionValue, String value) {
+    this.optionValue = optionValue;
+    this.value = value;
   }
 
   public String getOptionValue() {
@@ -25,11 +26,6 @@ public class IllegalValueException extends RuntimeException {
   }
 
   public void setValue(String value) {
-    this.value = value;
-  }
-
-  public IllegalValueException(String optionValue, String value) {
-    this.optionValue = optionValue;
     this.value = value;
   }
 

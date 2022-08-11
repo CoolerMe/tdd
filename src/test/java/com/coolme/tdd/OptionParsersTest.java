@@ -2,6 +2,9 @@ package com.coolme.tdd;
 
 import static com.coolme.tdd.OptionParsersTest.BooleanParser.option;
 
+import com.coolme.tdd.exception.IllegalValueException;
+import com.coolme.tdd.exception.InsufficientArgumentsException;
+import com.coolme.tdd.exception.TooManyArgumentsException;
 import java.lang.annotation.Annotation;
 import java.util.Arrays;
 import java.util.List;
@@ -22,6 +25,7 @@ class OptionParsersTest {
     public void should_set_string_option_if_flag_present() {
       String result = OptionParsers.unary("", String::valueOf).parse(
           Arrays.asList("-d", "/usr/log"), option("d"));
+
       Assertions.assertEquals(result, "/usr/log");
     }
 
@@ -34,6 +38,7 @@ class OptionParsersTest {
 
       Object result = OptionParsers.unary(whatever, parse).parse(
           Arrays.asList("-p", "8080"), option("p"));
+
       Assertions.assertEquals(result, parsed);
     }
 
@@ -69,38 +74,13 @@ class OptionParsersTest {
 
       Object result = OptionParsers.unary(defaultValue, parse)
           .parse(List.of(), option("d"));
+
       Assertions.assertSame(result, defaultValue);
     }
   }
 
   @Nested
   class BooleanParser {
-
-    // sad path
-    //  boolean -l 1 | -l t f
-    @Test
-    public void should_not_accept_extra_arguments() {
-      TooManyArgumentsException exception = Assertions.assertThrows(
-          TooManyArgumentsException.class,
-          () -> OptionParsers.bool().parse(Arrays.asList("-l", "t"), option("l")));
-
-      Assertions.assertEquals(exception.getValue(), "l");
-    }
-
-    // Happy path
-    @Test
-    public void should_set_boolean_option_to_true_if_flag_present() {
-      boolean logging = OptionParsers.bool().parse(List.of("-l"), option("l"));
-      Assertions.assertTrue(logging);
-    }
-
-    // default value
-    @Test
-    public void should_set_default_value_as_false_if_not_present() {
-      boolean logging = OptionParsers.bool().parse(List.of(), option("l"));
-      Assertions.assertFalse(logging);
-    }
-
 
     static Option option(String value) {
       return new Option() {
@@ -117,6 +97,33 @@ class OptionParsersTest {
       };
     }
 
+    // sad path
+    //  boolean -l 1 | -l t f
+    @Test
+    public void should_not_accept_extra_arguments() {
+      TooManyArgumentsException exception = Assertions.assertThrows(
+          TooManyArgumentsException.class,
+          () -> OptionParsers.bool().parse(Arrays.asList("-l", "t"), option("l")));
+
+      Assertions.assertEquals(exception.getValue(), "l");
+    }
+
+    // Happy path
+    @Test
+    public void should_set_boolean_option_to_true_if_flag_present() {
+      boolean logging = OptionParsers.bool().parse(List.of("-l"), option("l"));
+
+      Assertions.assertTrue(logging);
+    }
+
+    // default value
+    @Test
+    public void should_set_default_value_as_false_if_not_present() {
+      boolean logging = OptionParsers.bool().parse(List.of(), option("l"));
+
+      Assertions.assertFalse(logging);
+    }
+
   }
 
   @Nested
@@ -127,6 +134,7 @@ class OptionParsersTest {
     public void should_parse_list_value() {
       String[] parse = OptionParsers.list(String[]::new, String::valueOf)
           .parse(Arrays.asList("-g", "this", "is"), option("g"));
+
       Assertions.assertArrayEquals(new String[]{"this", "is"}, parse);
     }
 
@@ -146,11 +154,20 @@ class OptionParsersTest {
       Assertions.assertEquals(exception.getOptionValue(), "g");
     }
 
+    @Test
+    public void should_not_parse_negative_decimal_as_flag() {
+      Integer[] integers = OptionParsers.list(Integer[]::new, Integer::parseInt)
+          .parse(Arrays.asList("-d", "1", "-1"), option("d"));
+
+      Assertions.assertArrayEquals(new Integer[]{1, -1}, integers);
+    }
+
     //  default path -g []
     @Test
     public void should_get_default_array() {
       String[] parse = OptionParsers.list(String[]::new, String::valueOf)
-          .parse(Arrays.asList("-g"), option("g"));
+          .parse(List.of("-g"), option("g"));
+
       Assertions.assertArrayEquals(new String[]{}, parse);
     }
 

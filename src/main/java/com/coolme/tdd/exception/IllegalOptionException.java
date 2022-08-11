@@ -1,4 +1,4 @@
-package com.coolme.tdd;
+package com.coolme.tdd.exception;
 
 /**
  * @author coolme
@@ -6,14 +6,14 @@ package com.coolme.tdd;
 public class IllegalOptionException extends RuntimeException {
 
 
-  public String getParameter() {
-    return parameter;
-  }
-
   private String parameter;
 
   public IllegalOptionException(String parameter) {
     this.parameter = parameter;
+  }
+
+  public String getParameter() {
+    return parameter;
   }
 
 
