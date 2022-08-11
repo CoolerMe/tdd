@@ -4,22 +4,29 @@ import java.lang.reflect.Parameter;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Function;
+import java.util.function.IntFunction;
 import java.util.stream.IntStream;
 
 class OptionParsers<T> {
 
-  public static <T> OptionParser<T> unary(T defaultValue,
-      Function<String, T> parser) {
-    return (arguments, option) -> values(arguments, option, 1)
-        .map(strings -> parseValue(option, strings.get(0), parser))
-        .orElse(defaultValue);
+  public static OptionParser<Boolean> bool() {
+    return (arguments, option) -> values(arguments, option, 0).map(it -> true).orElse(false);
   }
 
-  public static OptionParser<Boolean> bool() {
+  public static <T> OptionParser<T> unary(T defaultValue, Function<String, T> parser) {
+    return (arguments, option) -> values(arguments, option, 1).map(
+        strings -> parseValue(option, strings.get(0), parser)).orElse(defaultValue);
+  }
+
+  public static <T> OptionParser<T[]> list(IntFunction<T[]> generator, Function<String, T> parser) {
     return (arguments, option)
-        -> values(arguments, option, 0)
-        .map(it -> true)
-        .orElse(false);
+        -> values(arguments, option)
+        .map(it ->
+            it.stream()
+                .map(value -> parseValue(option, value, parser))
+                .toArray(generator))
+        .orElse(generator.apply(0));
+
   }
 
   static Object parse(List<String> arguments, Parameter parameter) {
@@ -30,6 +37,11 @@ class OptionParsers<T> {
         .parse(arguments, parameter.getAnnotation(Option.class));
   }
 
+
+  private static Optional<List<String>> values(List<String> arguments, Option option) {
+    int index = arguments.indexOf("-" + option.value());
+    return Optional.ofNullable(index == -1 ? null : values(arguments, index));
+  }
 
   private static Optional<List<String>> values(List<String> arguments, Option option,
       int expectedSize) {
@@ -63,11 +75,8 @@ class OptionParsers<T> {
   }
 
   private static List<String> values(List<String> arguments, int index) {
-    int followedIndex = IntStream
-        .range(index + 1, arguments.size())
-        .filter(it -> arguments.get(it).startsWith("-"))
-        .findFirst()
-        .orElse(arguments.size());
+    int followedIndex = IntStream.range(index + 1, arguments.size())
+        .filter(it -> arguments.get(it).startsWith("-")).findFirst().orElse(arguments.size());
 
     return arguments.subList(index + 1, followedIndex);
   }

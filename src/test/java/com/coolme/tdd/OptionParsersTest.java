@@ -118,4 +118,41 @@ class OptionParsersTest {
     }
 
   }
+
+  @Nested
+  class ListParser {
+
+    //  happy path -g this is a parameter
+    @Test
+    public void should_parse_list_value() {
+      String[] parse = OptionParsers.list(String[]::new, String::valueOf)
+          .parse(Arrays.asList("-g", "this", "is"), option("g"));
+      Assertions.assertArrayEquals(new String[]{"this", "is"}, parse);
+    }
+
+    //  sad path -d a
+    @Test
+    public void should_throw_exception_if_error_occurs() {
+      Function<String, Object> parser = s -> {
+        throw new RuntimeException();
+      };
+
+      IllegalValueException exception = Assertions.assertThrows(
+          IllegalValueException.class,
+          () -> OptionParsers.list(String[]::new, parser)
+              .parse(Arrays.asList("-g", "this", "is"), option("g")));
+
+      Assertions.assertEquals(exception.getValue(), "this");
+      Assertions.assertEquals(exception.getOptionValue(), "g");
+    }
+
+    //  default path -g []
+    @Test
+    public void should_get_default_array() {
+      String[] parse = OptionParsers.list(String[]::new, String::valueOf)
+          .parse(Arrays.asList("-g"), option("g"));
+      Assertions.assertArrayEquals(new String[]{}, parse);
+    }
+
+  }
 }
