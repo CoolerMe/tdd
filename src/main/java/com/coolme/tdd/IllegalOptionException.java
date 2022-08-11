@@ -5,12 +5,9 @@ package com.coolme.tdd;
  */
 public class IllegalOptionException extends RuntimeException {
 
+
   public String getParameter() {
     return parameter;
-  }
-
-  public void setParameter(String parameter) {
-    this.parameter = parameter;
   }
 
   private String parameter;
