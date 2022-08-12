@@ -14,6 +14,8 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.mockito.InOrder;
+import org.mockito.Mockito;
 
 class OptionParsersTest {
 
@@ -32,14 +34,12 @@ class OptionParsersTest {
 
     @Test
     public void should_parse_int_if_flag_present() {
-      Object parsed = new Object();
-      Function<String, Object> parse = (it) -> parsed;
-      Object whatever = new Object();
+      Function parser = Mockito.mock(Function.class);
 
-      Object result = OptionParsers.unary(whatever, parse).parse(
+      OptionParsers.unary(Mockito.any(), parser).parse(
           Arrays.asList("-p", "8080"), option("p"));
 
-      Assertions.assertEquals(result, parsed);
+      Mockito.verify(parser).apply("8080");
     }
 
     // sad path
@@ -132,10 +132,14 @@ class OptionParsersTest {
     //  happy path -g this is a parameter
     @Test
     public void should_parse_list_value() {
-      String[] parse = OptionParsers.list(String[]::new, String::valueOf)
+      Function parser = Mockito.mock(Function.class);
+
+      OptionParsers.list(Object[]::new, parser)
           .parse(Arrays.asList("-g", "this", "is"), option("g"));
 
-      Assertions.assertArrayEquals(new String[]{"this", "is"}, parse);
+      InOrder inOrder = Mockito.inOrder(parser, parser);
+      inOrder.verify(parser).apply("this");
+      inOrder.verify(parser).apply("is");
     }
 
     //  sad path -d a
