@@ -1,52 +1,104 @@
 package com.coolme.tdd;
 
-import com.coolme.tdd.exception.IllegalOptionException;
-import org.junit.jupiter.api.Assertions;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
-class ArgsTest {
+/**
+ * @author yeye.zeng 2022/8/16
+ */
+public class ArgsTest {
 
-  // multi
-  @Test
-  public void should_parse_multi_options() {
-    MultiOption option = Args.parse(MultiOption.class, "-l", "-p", "8080", "-d", "/usr/log");
+    // single
+    // -boolean -l
+    @Test
+    public void should_set_boolean_option_to_true_if_flag_present() {
+        BooleanOption option = Args.parse(BooleanOption.class, "-l");
 
-    Assertions.assertEquals(option.port, 8080);
-    Assertions.assertEquals(option.directory, "/usr/log");
-    Assertions.assertTrue(option.logging);
-  }
+        assertTrue(option.logging());
+    }
 
-  @Test
-  public void should_parse_list_options() {
-    ListOption option = Args.parse(ListOption.class, "-d", "-1", "2", "3", "4", "-g", "this", "is",
-        "a", "cat");
+    @Test
+    public void should_set_boolean_option_to_flag_if_flag_not_present() {
+        BooleanOption option = Args.parse(BooleanOption.class);
 
-    Assertions.assertArrayEquals(new Integer[]{-1, 2, 3, 4}, option.decimals);
-    Assertions.assertArrayEquals(new String[]{"this", "is", "a", "cat"}, option.group);
-  }
+        assertFalse(option.logging());
+    }
 
-  @Test
-  public void should_throw_illegal_option_exception_if_no_annotation_present() {
-    IllegalOptionException exception = Assertions.assertThrows(
-        IllegalOptionException.class,
-        () -> Args.parse(MultiOptionWithoutAnnotation.class, "-l", "-p", "8080", "-d", "/usr/log"));
+    static record BooleanOption(@Option("l") boolean logging) {
 
-    Assertions.assertEquals("port", exception.getParameter());
-  }
+    }
+
+    // -int -p 8080
+    @Test
+    public void should_parse_int_option_to_int_if_flag_present() {
+        IntOption option = Args.parse(IntOption.class, "-p", "8080");
+
+        assertEquals(option.port(), 8080);
+    }
+
+    static record IntOption(@Option("p") int port) {
+
+    }
+
+    // -String -d /usr/log
+    @Test
+    public void should_parse_string_option_if_flag_present() {
+        StringOption option = Args.parse(StringOption.class, "-d", "/usr/log");
+
+        assertEquals(option.directory(), "/usr/log");
+    }
+
+    static record StringOption(@Option("d") String directory) {
+
+    }
+
+    // multi
+    // TODO -l -p 8080 -d /usr/log
+
+    // sad path
+    // TODO -boolean -l | -l t
+    // TODO -int  -p 8080 8081 | -p
+    // TODO-String -d | -d /usr/log /usr/vars
+
+    // default path
+    // TODO -boolean -l : true
+    // TODO -int -p: 8080
+    // TODO -String -d : ""
+    @Test
+    @Disabled
+    public void should_pass_example1() {
+        MultiOption option = Args.parse(MultiOption.class, "-l", "-p", "8080", "-d", "/usr/log");
+
+        assertTrue(option.logging);
+        assertEquals(option.port, 8080);
+        assertEquals(option.directory, "/usr/log");
+    }
 
 
-  public record MultiOption(@Option("l") boolean logging, @Option("d") String directory,
-                            @Option("p") int port) {
+    // -g this is a cat
+    @Test
+    @Disabled
+    public void should_pass_example2() {
+        ListOption option = Args.parse(ListOption.class, "this", "is", "a", "cat");
 
-  }
+        assertArrayEquals(new String[]{"this", "is", "a", "cat"}, option.group());
+    }
 
-  public record MultiOptionWithoutAnnotation(@Option("l") boolean logging,
-                                             @Option("d") String directory,
-                                             int port) {
+    static record MultiOption(@Option("l") boolean logging,
+                              @Option("d") String directory,
+                              @Option("p") int port) {
 
-  }
 
-  public record ListOption(@Option("d") Integer[] decimals, @Option("g") String[] group) {
+    }
 
-  }
+    static record ListOption(@Option("g") String[] group) {
+
+
+    }
+
 }

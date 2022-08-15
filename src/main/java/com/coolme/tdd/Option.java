@@ -6,15 +6,14 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
-
 /**
  * @author coolme
  */
-@Target({ElementType.PARAMETER})
 @Retention(RetentionPolicy.RUNTIME)
+@Target(ElementType.PARAMETER)
 @Documented
 public @interface Option {
 
-  String value();
+    String value();
 
 }
