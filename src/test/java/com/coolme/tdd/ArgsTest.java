@@ -17,14 +17,14 @@ public class ArgsTest {
     // -boolean -l
     @Test
     public void should_set_boolean_option_to_true_if_flag_present() {
-        BooleanOption option = Args.parse(BooleanOption.class, "-l");
+        BooleanOption option = Args.parseBoolean(BooleanOption.class, "-l");
 
         assertTrue(option.logging());
     }
 
     @Test
     public void should_set_boolean_option_to_flag_if_flag_not_present() {
-        BooleanOption option = Args.parse(BooleanOption.class);
+        BooleanOption option = Args.parseBoolean(BooleanOption.class);
 
         assertFalse(option.logging());
     }
@@ -36,7 +36,7 @@ public class ArgsTest {
     // -int -p 8080
     @Test
     public void should_parse_int_option_to_int_if_flag_present() {
-        IntOption option = Args.parse(IntOption.class, "-p", "8080");
+        IntOption option = Args.parseBoolean(IntOption.class, "-p", "8080");
 
         assertEquals(option.port(), 8080);
     }
@@ -48,7 +48,7 @@ public class ArgsTest {
     // -String -d /usr/log
     @Test
     public void should_parse_string_option_if_flag_present() {
-        StringOption option = Args.parse(StringOption.class, "-d", "/usr/log");
+        StringOption option = Args.parseBoolean(StringOption.class, "-d", "/usr/log");
 
         assertEquals(option.directory(), "/usr/log");
     }
@@ -59,7 +59,14 @@ public class ArgsTest {
 
     // multi
     // TODO -l -p 8080 -d /usr/log
+    @Test
+    public void should_parse_multi_options() {
+        MultiOption option = Args.parseBoolean(MultiOption.class, "-l", "-p", "8080", "-d", "/usr/log");
 
+        assertTrue(option.logging);
+        assertEquals(option.port, 8080);
+        assertEquals(option.directory, "/usr/log");
+    }
     // sad path
     // TODO -boolean -l | -l t
     // TODO -int  -p 8080 8081 | -p
@@ -69,22 +76,13 @@ public class ArgsTest {
     // TODO -boolean -l : true
     // TODO -int -p: 8080
     // TODO -String -d : ""
-    @Test
-    @Disabled
-    public void should_pass_example1() {
-        MultiOption option = Args.parse(MultiOption.class, "-l", "-p", "8080", "-d", "/usr/log");
-
-        assertTrue(option.logging);
-        assertEquals(option.port, 8080);
-        assertEquals(option.directory, "/usr/log");
-    }
 
 
     // -g this is a cat
     @Test
     @Disabled
     public void should_pass_example2() {
-        ListOption option = Args.parse(ListOption.class, "this", "is", "a", "cat");
+        ListOption option = Args.parseBoolean(ListOption.class, "this", "is", "a", "cat");
 
         assertArrayEquals(new String[]{"this", "is", "a", "cat"}, option.group());
     }

@@ -5,37 +5,36 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Parameter;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 
 /**
  * @author coolme
  */
 public class Args {
 
-    public static <T> T parse(Class<T> optionClass, String... args) {
-        Constructor<?> constructor = optionClass.getDeclaredConstructors()[0];
-        Parameter parameter = constructor.getParameters()[0];
-        Option option = parameter.getAnnotation(Option.class);
-        List<String> arguments = Arrays.asList(args);
+    private static final Map<Class<?>, OptionParser> PARSERS = Map.of(
+        int.class, new SingleValuedOption(Integer::parseInt),
+        boolean.class, new BooleanOptionParser(),
+        String.class, new SingleValuedOption(String::valueOf));
 
-        Object value = null;
-        if (parameter.getType() == boolean.class) {
-            value = arguments.contains("-" + option.value());
-        }
-
-        if (parameter.getType() == int.class) {
-            int index = arguments.indexOf("-" + option.value());
-            value = Integer.parseInt(arguments.get(index + 1));
-        }
-
-        if (parameter.getType() == String.class) {
-            int index = arguments.indexOf("-" + option.value());
-            value = String.valueOf(arguments.get(index + 1));
-        }
-
+    public static <T> T parseBoolean(Class<T> optionClass, String... args) {
         try {
-            return (T) constructor.newInstance(value);
+            Constructor<?> constructor = optionClass.getDeclaredConstructors()[0];
+            List<String> arguments = Arrays.asList(args);
+
+            Object[] values = Arrays.stream(constructor.getParameters())
+                .map(it -> parseOption(it, arguments)).toArray();
+
+            return (T) constructor.newInstance(values);
         } catch (InstantiationException | IllegalAccessException | InvocationTargetException e) {
             throw new RuntimeException(e);
         }
     }
+
+    private static Object parseOption(Parameter parameter, List<String> arguments) {
+        return PARSERS.get(parameter.getType())
+            .parse(arguments, parameter.getAnnotation(Option.class));
+    }
+
+
 }
