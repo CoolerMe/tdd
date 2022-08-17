@@ -1,7 +1,7 @@
 package com.coolme.tdd;
 
+import com.coolme.tdd.exception.IllegalOptionException;
 import java.lang.reflect.Constructor;
-import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Parameter;
 import java.util.Arrays;
 import java.util.List;
@@ -17,7 +17,7 @@ public class Args {
         boolean.class, new BooleanOptionParser(),
         String.class, new SingleValuedOptionParser<>("", String::valueOf));
 
-    public static <T> T parseBoolean(Class<T> optionClass, String... args) {
+    public static <T> T parse(Class<T> optionClass, String... args) {
         try {
             Constructor<?> constructor = optionClass.getDeclaredConstructors()[0];
             List<String> arguments = Arrays.asList(args);
@@ -26,12 +26,18 @@ public class Args {
                 .map(it -> parseOption(it, arguments)).toArray();
 
             return (T) constructor.newInstance(values);
-        } catch (InstantiationException | IllegalAccessException | InvocationTargetException e) {
+        } catch (IllegalOptionException e) {
+            throw e;
+        } catch (Exception e) {
             throw new RuntimeException(e);
         }
     }
 
     private static Object parseOption(Parameter parameter, List<String> arguments) {
+        if (!parameter.isAnnotationPresent(Option.class)) {
+            throw new IllegalOptionException(parameter.getName());
+        }
+
         return PARSERS.get(parameter.getType())
             .parse(arguments, parameter.getAnnotation(Option.class));
     }
