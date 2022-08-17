@@ -2,7 +2,7 @@ package com.coolme.tdd;
 
 import java.util.List;
 
-interface OptionParser {
+interface OptionParser<T> {
 
     /**
      * Parse arguments to get option
@@ -11,5 +11,5 @@ interface OptionParser {
      * @param option    {@link Option}
      * @return the result
      */
-    Object parse(List<String> arguments, Option option);
+    T parse(List<String> arguments, Option option);
 }
