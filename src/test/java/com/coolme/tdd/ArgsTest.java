@@ -6,7 +6,6 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.coolme.tdd.exception.IllegalOptionException;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -26,6 +25,7 @@ public class ArgsTest {
         assertEquals(option.directory, "/usr/log");
     }
 
+
     @Test
     public void should_throw_illegal_option_exception_if_option_not_present() {
         IllegalOptionException exception = assertThrows(IllegalOptionException.class,
@@ -35,22 +35,21 @@ public class ArgsTest {
 
     }
 
-    record IllegalOption(@Option("-p") int port, @Option("-d") String directory, boolean logging) {
-
-    }
-
-
-    // -g this is a cat
     @Test
-    @Disabled
-    public void should_pass_example2() {
-        ListOption option = Args.parse(ListOption.class, "this", "is", "a", "cat");
+    public void should_parse_list_option_if_flag_present() {
 
-        assertArrayEquals(new String[]{"this", "is", "a", "cat"}, option.group());
+        ListOption listOption = Args.parse(ListOption.class, "-d", "-100", "200", "-g", "this",
+            "is", "my", "cat");
+
+        assertArrayEquals(listOption.group(), new String[]{"this", "is", "my", "cat"});
+        assertArrayEquals(listOption.decimals(), new Integer[]{-100, 200});
     }
 
+    record IllegalOption(@Option("p") int port, @Option("d") String directory, boolean logging) {
 
-    record StringOption(@Option("d") String directory) {
+    }
+
+    record ListOption(@Option("g") String[] group, @Option("d") Integer[] decimals) {
 
     }
 
@@ -61,9 +60,5 @@ public class ArgsTest {
 
     }
 
-    record ListOption(@Option("g") String[] group) {
-
-
-    }
 
 }
