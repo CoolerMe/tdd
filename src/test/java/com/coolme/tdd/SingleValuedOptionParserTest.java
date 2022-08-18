@@ -23,7 +23,8 @@ class SingleValuedOptionParserTest {
         Object parsed = new Object();
         Function<String, Object> parser = (it) -> parsed;
 
-        Object value = new SingleValuedOptionParser<>(defaultValue, parser).parse(
+        Object value = SingleValuedOptionParser.unary(defaultValue, parser)
+            .parse(
             List.of("-p", "8080"),
             option("p"));
 
@@ -33,7 +34,7 @@ class SingleValuedOptionParserTest {
     //
     @Test
     public void should_parse_string_option_if_flag_present() {
-        String value = new SingleValuedOptionParser<>("", String::valueOf).parse(
+        String value = SingleValuedOptionParser.unary("", String::valueOf).parse(
             List.of("-d", "/usr/log"),
             option("d"));
 
@@ -46,7 +47,7 @@ class SingleValuedOptionParserTest {
     public void should_not_accept_extra_arguments() {
         TooManyArgumentException exception = assertThrows(TooManyArgumentException.class,
             () -> {
-                new SingleValuedOptionParser<>(0, Integer::parseInt).parse(
+                SingleValuedOptionParser.unary(0, Integer::parseInt).parse(
                     List.of("-p", "8080", "8081"), option("p"));
             });
 
@@ -59,7 +60,7 @@ class SingleValuedOptionParserTest {
     public void should_not_accept_insufficient_argument(String argument) {
         InsufficientArgumentException exception = assertThrows(InsufficientArgumentException.class,
             () -> {
-                new SingleValuedOptionParser<>(0, Integer::parseInt).parse(
+                SingleValuedOptionParser.unary(0, Integer::parseInt).parse(
                     List.of(argument.split(" ")),
                     option("p"));
             });
@@ -73,7 +74,8 @@ class SingleValuedOptionParserTest {
         Function<String, Object> parser = s -> null;
         Object defaultValue = new Object();
 
-        Object parsed = new SingleValuedOptionParser<>(defaultValue, parser).parse(
+        Object parsed = SingleValuedOptionParser.unary(defaultValue, parser)
+            .parse(
             List.of(),
             option("p"));
 

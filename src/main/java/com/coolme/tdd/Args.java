@@ -13,9 +13,9 @@ import java.util.Map;
 public class Args {
 
     private static final Map<Class<?>, OptionParser> PARSERS = Map.of(
-        int.class, new SingleValuedOptionParser<>(0, Integer::parseInt),
-        boolean.class, new BooleanOptionParser(),
-        String.class, new SingleValuedOptionParser<>("", String::valueOf));
+        int.class, SingleValuedOptionParser.unary(0, Integer::parseInt),
+        boolean.class, SingleValuedOptionParser.bool(),
+        String.class, SingleValuedOptionParser.unary("", String::valueOf));
 
     public static <T> T parse(Class<T> optionClass, String... args) {
         try {
