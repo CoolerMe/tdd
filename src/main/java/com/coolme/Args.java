@@ -6,6 +6,9 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * @author coolme
+ */
 public class Args {
 
   public static <T> T parse(Class<T> optionClass, String... args) {
@@ -29,12 +32,12 @@ public class Args {
   private static Object getValue(Parameter parameter, List<String> arguments) {
 
     return PARSER.get(parameter.getType())
-        .parse(arguments, parameter.getAnnotation(Option.class).value());
+        .parse(arguments, parameter.getAnnotation(Option.class));
   }
 
   private static final Map<Class<?>, OptionParser> PARSER = Map.of(int.class,
-      new SingleValueOptionParser<>(Integer::parseInt),
+      new SingleValueOptionParser<>(0, Integer::parseInt),
       boolean.class, new BooleanParser(),
-      String.class, new SingleValueOptionParser<>(String::valueOf));
+      String.class, new SingleValueOptionParser<>("", String::valueOf));
 
 }

@@ -2,10 +2,15 @@ package com.coolme;
 
 import java.util.List;
 
-public class BooleanParser implements OptionParser {
+public class BooleanParser implements OptionParser<Boolean> {
 
   @Override
-  public Object parse(List<String> arguments, String optionValue) {
-    return arguments.contains("-" + optionValue);
+  public Boolean parse(List<String> arguments, Option option) {
+    int index = arguments.indexOf("-" + option.value());
+    int nextIndex = index + 1;
+    if (nextIndex < arguments.size() && !arguments.get(nextIndex).startsWith("-")) {
+      throw new ToManyArgumentsException(option.value());
+    }
+    return index != -1;
   }
 }

@@ -2,7 +2,7 @@ package com.coolme;
 
 import java.util.List;
 
-interface OptionParser {
+public interface OptionParser<T> {
 
-  Object parse(List<String> arguments, String optionValue);
+  T parse(List<String> arguments, Option option);
 }
