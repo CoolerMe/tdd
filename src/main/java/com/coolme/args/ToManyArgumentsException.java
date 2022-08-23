@@ -1,4 +1,4 @@
-package com.coolme;
+package com.coolme.args;
 
 public class ToManyArgumentsException extends RuntimeException {
 

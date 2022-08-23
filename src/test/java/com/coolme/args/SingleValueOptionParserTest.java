@@ -1,8 +1,9 @@
-package com.coolme;
+package com.coolme.args;
 
-import static com.coolme.BooleanParserTest.option;
+import static com.coolme.args.BooleanParserTest.option;
 
 import java.util.List;
+
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;

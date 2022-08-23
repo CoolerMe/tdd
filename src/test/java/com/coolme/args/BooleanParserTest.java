@@ -1,9 +1,13 @@
-package com.coolme;
+package com.coolme.args;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.lang.annotation.Annotation;
 import java.util.List;
+
+import com.coolme.args.BooleanParser;
+import com.coolme.args.Option;
+import com.coolme.args.ToManyArgumentsException;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 

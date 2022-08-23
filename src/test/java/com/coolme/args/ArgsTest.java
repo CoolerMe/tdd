@@ -1,10 +1,12 @@
-package com.coolme;
+package com.coolme.args;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.coolme.args.Args;
+import com.coolme.args.Option;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
