@@ -30,7 +30,7 @@ class ContainerTest {
             };
             context.bind(Component.class, component);
 
-            assertSame(context.get(Component.class).orElseThrow(DependencyNotFoundException::new), component);
+            assertSame(context.get(Component.class).get(), component);
         }
 
         // TODO sad interface
@@ -105,7 +105,9 @@ class ContainerTest {
 
                 context.bind(Component.class, ComponentWithInjectConstructor.class);
 
-                assertThrows(DependencyNotFoundException.class, () -> context.get(Component.class).get());
+                DependencyNotFoundException exception = assertThrows(DependencyNotFoundException.class, () -> context.get(Component.class).get());
+                assertEquals(Dependency.class, exception.getDependency());
+
             }
 
             @Test
@@ -115,6 +117,38 @@ class ContainerTest {
                 assertTrue(component.isEmpty());
             }
 
+            // A->B->A
+            @Test
+            public void should_throw_exception_if_cyclic_dependency_exists() {
+                context.bind(Component.class, ComponentWithInjectConstructor.class);
+                context.bind(Dependency.class, DependencyWithComponentInjected.class);
+
+                assertThrows(CyclicDependencyException.class, () -> context.get(Dependency.class).get());
+
+            }
+
+            // A->B->C->A
+            @Test
+            public void should_throw_exception_of_transitive_cyclic_dependencies_happens() {
+                context.bind(Component.class, ComponentWithInjectConstructor.class);
+                context.bind(Dependency.class, DependencyDependentOnAnotherDependency.class);
+                context.bind(AnotherDependency.class, AnotherDependencyDependentOnComponent.class);
+
+                assertThrows(CyclicDependencyException.class, () -> context.get(AnotherDependency.class).get());
+
+            }
+
+            // A->B->C
+            @Test
+            public void should_throw_exception_if_transitive_dependencies_not_found() {
+                context.bind(Component.class, ComponentWithInjectConstructor.class);
+                context.bind(Dependency.class, DependencyWithInjectConstructor.class);
+
+                DependencyNotFoundException exception = assertThrows(DependencyNotFoundException.class, () -> context.get(Component.class).get());
+
+                assertEquals(String.class, exception.getDependency());
+                assertEquals(Dependency.class, exception.getComponent());
+            }
         }
 
         @Nested
@@ -190,6 +224,16 @@ class ComponentWithInjectConstructor implements Component {
     }
 }
 
+class DependencyWithComponentInjected implements Dependency {
+
+    private Component component;
+
+    @Inject
+    public DependencyWithComponentInjected(Component component) {
+        this.component = component;
+    }
+}
+
 class DependencyWithInjectConstructor implements Dependency {
     private String dependency;
 
@@ -204,5 +248,29 @@ class DependencyWithInjectConstructor implements Dependency {
 
     public String getDependency() {
         return dependency;
+    }
+}
+
+interface AnotherDependency {
+
+}
+
+class DependencyDependentOnAnotherDependency implements Dependency {
+
+    private AnotherDependency dependency;
+
+    @Inject
+    public DependencyDependentOnAnotherDependency(AnotherDependency dependency) {
+        this.dependency = dependency;
+    }
+}
+
+class AnotherDependencyDependentOnComponent implements AnotherDependency {
+
+    private Component component;
+
+    @Inject
+    public AnotherDependencyDependentOnComponent(Component component) {
+        this.component = component;
     }
 }

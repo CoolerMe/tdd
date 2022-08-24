@@ -23,22 +23,15 @@ public class Context {
     public <Type, Implementation extends Type>
     void bind(Class<Type> type, Class<Implementation> implementation) {
         Constructor<Implementation> constructor = getConstructor(implementation);
+        providers.put(type, new ConstructorInjectionProvider<>(constructor, type));
+    }
 
-        providers.put(type, () -> {
-
-            Object[] objects = stream(constructor.getParameters())
-                    .map(it -> get(it.getType()).orElseThrow(DependencyNotFoundException::new))
-                    .toArray();
-            try {
-                return constructor.newInstance(objects);
-            } catch (InstantiationException | IllegalAccessException | InvocationTargetException e) {
-                throw new RuntimeException(e);
-            }
-        });
+    public <Type> Optional<Type> get(Class<Type> type) {
+        return Optional.ofNullable(providers.get(type))
+                .map(it -> (Type) it.get());
     }
 
     private static <Type> Constructor<Type> getConstructor(Class<Type> implementation) {
-
         List<Constructor<?>> injectConstructors = stream(implementation.getConstructors())
                 .filter(it -> it.isAnnotationPresent(Inject.class)).toList();
 
@@ -56,14 +49,39 @@ public class Context {
                         throw new IllegalComponentException();
                     }
                 });
-
-
     }
 
-    public <Type> Optional<Type> get(Class<Type> type) {
-        return Optional.ofNullable(providers.get(type))
-                .map(it -> (Type) it.get());
-    }
 
+    class ConstructorInjectionProvider<Type> implements Provider<Type> {
+
+        private final Constructor<Type> constructor;
+
+        private final Class<?> componentClass;
+
+        private boolean constructing = false;
+
+        public ConstructorInjectionProvider(Constructor<Type> constructor, Class<?> componentClass) {
+            this.constructor = constructor;
+            this.componentClass = componentClass;
+        }
+
+        @Override
+        public Type get() {
+            if (constructing) {
+                throw new CyclicDependencyException();
+            }
+            constructing = true;
+            Object[] objects = stream(constructor.getParameters())
+                    .map(it -> Context.this.get(it.getType()).orElseThrow(() -> new DependencyNotFoundException(it.getType(), componentClass)))
+                    .toArray();
+            try {
+                return constructor.newInstance(objects);
+            } catch (InstantiationException | IllegalAccessException | InvocationTargetException e) {
+                throw new RuntimeException(e);
+            } finally {
+                constructing = false;
+            }
+        }
+    }
 
 }
