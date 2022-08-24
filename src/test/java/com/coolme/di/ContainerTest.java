@@ -5,6 +5,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
+import java.util.Optional;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 class ContainerTest {
@@ -28,7 +30,7 @@ class ContainerTest {
             };
             context.bind(Component.class, component);
 
-            assertSame(context.get(Component.class), component);
+            assertSame(context.get(Component.class).orElseThrow(DependencyNotFoundException::new), component);
         }
 
         // TODO sad interface
@@ -41,7 +43,7 @@ class ContainerTest {
             public void should_bind_type_to_a_class_with_default_constructor() {
                 context.bind(Component.class, ComponentWithDefaultConstructor.class);
 
-                Component component = context.get(Component.class);
+                Component component = context.get(Component.class).get();
 
                 assertNotNull(component);
                 assertTrue(component instanceof ComponentWithDefaultConstructor);
@@ -55,7 +57,7 @@ class ContainerTest {
                 };
                 context.bind(Dependency.class, dependency);
 
-                Component component = context.get(Component.class);
+                Component component = context.get(Component.class).get();
 
                 assertNotNull(component);
                 assertTrue(component instanceof ComponentWithInjectConstructor);
@@ -70,7 +72,7 @@ class ContainerTest {
                 context.bind(Dependency.class, DependencyWithInjectConstructor.class);
                 context.bind(String.class, "String dependency");
 
-                Component component = context.get(Component.class);
+                Component component = context.get(Component.class).get();
                 assertNotNull(component);
 
                 Dependency dependency = ((ComponentWithInjectConstructor) component).getDependency();
@@ -81,15 +83,38 @@ class ContainerTest {
             }
 
             // Sad path
-            // TODO multi inject constructors
+            // multi inject constructors
             @Test
             public void should_throw_exception_if_multi_inject_constructors_provided() {
                 assertThrows(MultiInjectConstructorsException.class, () -> {
                     context.bind(Component.class, ComponentWithMultiInjectConstructors.class);
                 });
             }
-            // TODO no default constructor and inject constructor
-            // TODO dependency not exists
+
+            // no default constructor and inject constructor
+            @Test
+            public void should_throw_exception_if_nor_default_constructor_nor_inject_constructor() {
+                assertThrows(IllegalComponentException.class, () -> {
+                    context.bind(Component.class, ComponentWithNoDefaultConstructorNorInjectConstructor.class);
+                });
+            }
+
+            // dependency not exists
+            @Test
+            public void should_throw_exception_if_dependency_not_exists() {
+
+                context.bind(Component.class, ComponentWithInjectConstructor.class);
+
+                assertThrows(DependencyNotFoundException.class, () -> context.get(Component.class).get());
+            }
+
+            @Test
+            public void should_return_empty_if_component_not_defined() {
+                Optional<Component> component = context.get(Component.class);
+
+                assertTrue(component.isEmpty());
+            }
+
         }
 
         @Nested
@@ -136,6 +161,18 @@ class ComponentWithMultiInjectConstructors implements Component {
     }
 
 
+}
+
+class ComponentWithNoDefaultConstructorNorInjectConstructor implements Component {
+
+    private String name;
+
+    private Double decimal;
+
+    public ComponentWithNoDefaultConstructorNorInjectConstructor(String name, Double decimal) {
+        this.name = name;
+        this.decimal = decimal;
+    }
 }
 
 

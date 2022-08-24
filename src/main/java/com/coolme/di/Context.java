@@ -4,9 +4,11 @@ import jakarta.inject.Inject;
 import jakarta.inject.Provider;
 
 import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
-import java.util.stream.Stream;
+import java.util.Optional;
 
 import static java.util.Arrays.stream;
 
@@ -20,38 +22,47 @@ public class Context {
 
     public <Type, Implementation extends Type>
     void bind(Class<Type> type, Class<Implementation> implementation) {
+        Constructor<Implementation> constructor = getConstructor(implementation);
+
         providers.put(type, () -> {
+
+            Object[] objects = stream(constructor.getParameters())
+                    .map(it -> get(it.getType()).orElseThrow(DependencyNotFoundException::new))
+                    .toArray();
             try {
-                Constructor<Implementation> constructor = getConstructor(implementation);
-                Object[] objects = stream(constructor.getParameters())
-                        .map(it -> get(it.getType()))
-                        .toArray();
                 return constructor.newInstance(objects);
-            } catch (Exception e) {
+            } catch (InstantiationException | IllegalAccessException | InvocationTargetException e) {
                 throw new RuntimeException(e);
             }
         });
     }
 
     private static <Type> Constructor<Type> getConstructor(Class<Type> implementation) {
-        Stream<Constructor<?>> constructorStream = stream(implementation.getConstructors())
-                .filter(it -> it.isAnnotationPresent(Inject.class));
 
-        return (Constructor<Type>) constructorStream
+        List<Constructor<?>> injectConstructors = stream(implementation.getConstructors())
+                .filter(it -> it.isAnnotationPresent(Inject.class)).toList();
+
+        if (injectConstructors.size() > 1) {
+            throw new MultiInjectConstructorsException();
+        }
+
+        return (Constructor<Type>) injectConstructors
+                .stream()
                 .findFirst()
                 .orElseGet(() -> {
                     try {
                         return implementation.getConstructor();
                     } catch (NoSuchMethodException e) {
-                        throw new RuntimeException(e);
+                        throw new IllegalComponentException();
                     }
                 });
 
 
     }
 
-    public <Type> Type get(Class<Type> type) {
-        return (Type) providers.get(type).get();
+    public <Type> Optional<Type> get(Class<Type> type) {
+        return Optional.ofNullable(providers.get(type))
+                .map(it -> (Type) it.get());
     }
 
 
