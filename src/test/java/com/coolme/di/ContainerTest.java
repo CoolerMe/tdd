@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 import java.util.Optional;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -123,7 +124,13 @@ class ContainerTest {
                 context.bind(Component.class, ComponentWithInjectConstructor.class);
                 context.bind(Dependency.class, DependencyWithComponentInjected.class);
 
-                assertThrows(CyclicDependencyException.class, () -> context.get(Dependency.class).get());
+                CyclicDependencyException exception = assertThrows(CyclicDependencyException.class, () -> context.get(Component.class).get());
+
+                Set<Class<?>> components = exception.getComponents();
+
+                assertEquals(2, components.size());
+                assertTrue(components.contains(Component.class));
+                assertTrue(components.contains(Dependency.class));
 
             }
 
@@ -134,7 +141,13 @@ class ContainerTest {
                 context.bind(Dependency.class, DependencyDependentOnAnotherDependency.class);
                 context.bind(AnotherDependency.class, AnotherDependencyDependentOnComponent.class);
 
-                assertThrows(CyclicDependencyException.class, () -> context.get(AnotherDependency.class).get());
+                CyclicDependencyException exception = assertThrows(CyclicDependencyException.class, () -> context.get(AnotherDependency.class).get());
+
+                Set<Class<?>> components = exception.getComponents();
+                assertEquals(3, components.size());
+                assertTrue(components.contains(Component.class));
+                assertTrue(components.contains(Dependency.class));
+                assertTrue(components.contains(AnotherDependency.class));
 
             }
 

@@ -20,8 +20,7 @@ public class Context {
         providers.put(type, () -> instance);
     }
 
-    public <Type, Implementation extends Type>
-    void bind(Class<Type> type, Class<Implementation> implementation) {
+    public <Type, Implementation extends Type> void bind(Class<Type> type, Class<Implementation> implementation) {
         Constructor<Implementation> constructor = getConstructor(implementation);
         providers.put(type, new ConstructorInjectionProvider<>(constructor, type));
     }
@@ -33,14 +32,14 @@ public class Context {
 
     private static <Type> Constructor<Type> getConstructor(Class<Type> implementation) {
         List<Constructor<?>> injectConstructors = stream(implementation.getConstructors())
-                .filter(it -> it.isAnnotationPresent(Inject.class)).toList();
+                .filter(it -> it.isAnnotationPresent(Inject.class))
+                .toList();
 
         if (injectConstructors.size() > 1) {
             throw new MultiInjectConstructorsException();
         }
 
-        return (Constructor<Type>) injectConstructors
-                .stream()
+        return (Constructor<Type>) injectConstructors.stream()
                 .findFirst()
                 .orElseGet(() -> {
                     try {
@@ -68,14 +67,18 @@ public class Context {
         @Override
         public Type get() {
             if (constructing) {
-                throw new CyclicDependencyException();
+                throw new CyclicDependencyException(componentClass);
             }
-            constructing = true;
-            Object[] objects = stream(constructor.getParameters())
-                    .map(it -> Context.this.get(it.getType()).orElseThrow(() -> new DependencyNotFoundException(it.getType(), componentClass)))
-                    .toArray();
+
             try {
+                constructing = true;
+                Object[] objects = stream(constructor.getParameters())
+                        .map(it -> Context.this.get(it.getType())
+                                .orElseThrow(() -> new DependencyNotFoundException(it.getType(), componentClass)))
+                        .toArray();
                 return constructor.newInstance(objects);
+            } catch (CyclicDependencyException e) {
+                throw new CyclicDependencyException(componentClass, e);
             } catch (InstantiationException | IllegalAccessException | InvocationTargetException e) {
                 throw new RuntimeException(e);
             } finally {
