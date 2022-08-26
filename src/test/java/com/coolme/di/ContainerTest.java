@@ -124,7 +124,7 @@ class ContainerTest {
                 config.bind(Component.class, ComponentWithInjectConstructor.class);
                 config.bind(Dependency.class, DependencyWithComponentInjected.class);
 
-                CyclicDependencyException exception = assertThrows(CyclicDependencyException.class, () -> config.getContext().get(Component.class).get());
+                CyclicDependencyException exception = assertThrows(CyclicDependencyException.class, () -> config.getContext());
 
                 Set<Class<?>> components = exception.getComponents();
 
@@ -141,8 +141,9 @@ class ContainerTest {
                 config.bind(Dependency.class, DependencyDependentOnAnotherDependency.class);
                 config.bind(AnotherDependency.class, AnotherDependencyDependentOnComponent.class);
 
-                CyclicDependencyException exception = assertThrows(CyclicDependencyException.class, () -> config.getContext().get(AnotherDependency.class).get());
+                CyclicDependencyException exception = assertThrows(CyclicDependencyException.class, () -> config.getContext());
 
+                exception.getComponents().forEach(System.out::println);
                 Set<Class<?>> components = exception.getComponents();
                 assertEquals(3, components.size());
                 assertTrue(components.contains(Component.class));
