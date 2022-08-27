@@ -8,9 +8,8 @@ public class CyclicDependencyException extends RuntimeException {
 
     private final Set<Class<?>> components = new HashSet<>();
 
-    public CyclicDependencyException(Class<?> dependency, List<Class<?>> visiting) {
+    public CyclicDependencyException(List<Class<?>> visiting) {
         components.addAll(visiting);
-        components.add(dependency);
     }
 
     public Set<Class<?>> getComponents() {

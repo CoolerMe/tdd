@@ -45,9 +45,9 @@ public class ContextConfig {
             }
 
             if (visiting.contains(dependency)) {
-                throw new CyclicDependencyException(component, visiting);
+                throw new CyclicDependencyException(visiting);
             }
-            visiting.push(component);
+            visiting.push(dependency);
             checkDependencies(dependency, visiting);
             visiting.pop();
         }

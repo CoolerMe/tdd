@@ -168,10 +168,83 @@ class ContainerTest {
         @Nested
         public class FieldInjection {
 
+
+            @Test
+            public void should_inject_dependency_via_filed() {
+                Dependency dependency = new Dependency() {
+                };
+
+                config.bind(Dependency.class, dependency);
+                config.bind(Component.class, ComponentWithInjectFiled.class);
+
+                ComponentWithInjectFiled component = (ComponentWithInjectFiled) config.getContext().get(Component.class).get();
+                assertSame(dependency, component.dependency);
+
+            }
+
+            // sad path
+            @Test
+            public void should_throw_exception_if_inject_field_not_found() {
+                config.bind(ComponentWithInjectFiled.class, ComponentWithInjectFiled.class);
+
+                assertThrows(DependencyNotFoundException.class, () -> config.getContext());
+            }
+
+            //
+            @Test
+            public void should_include_field_dependency_in_dependencies() {
+                InjectionProvider<ComponentWithInjectFiled> provider = new InjectionProvider<>(ComponentWithInjectFiled.class);
+
+                assertArrayEquals(new Class<?>[]{Dependency.class}, provider.getDependencies().toArray());
+            }
+
+            @Test
+            public void should_inject_field_with_sub_class() {
+                Dependency dependency = new Dependency() {
+                };
+
+                config.bind(Dependency.class, dependency);
+                config.bind(SubComponentWithInjectFiled.class, SubComponentWithInjectFiled.class);
+
+                SubComponentWithInjectFiled component = config.getContext().get(SubComponentWithInjectFiled.class).get();
+                assertSame(dependency, component.dependency);
+            }
         }
 
         @Nested
         public class MethodInjection {
+
+            @Test
+            public void should_call_method_if_inject_annotation_added() {
+                config.bind(ComponentWithInjectMethod.class, ComponentWithInjectMethod.class);
+
+                ComponentWithInjectMethod component = config.getContext().get(ComponentWithInjectMethod.class).get();
+                assertTrue(component.called);
+
+            }
+
+            @Test
+            public void should_inject_dependency_via_inject_method() {
+                config.bind(ComponentWithInjectMethodAndDependency.class, ComponentWithInjectMethodAndDependency.class);
+                Dependency dependency = new Dependency() {
+                };
+
+                config.bind(Dependency.class, dependency);
+
+                ComponentWithInjectMethodAndDependency component = config.getContext().get(ComponentWithInjectMethodAndDependency.class).get();
+
+                assertSame(dependency, component.dependency);
+
+            }
+
+
+            //
+            @Test
+            public void should_include_method_dependency_in_dependencies() {
+                InjectionProvider<ComponentWithInjectMethodAndDependency> provider = new InjectionProvider<>(ComponentWithInjectMethodAndDependency.class);
+
+                assertArrayEquals(new Class<?>[]{Dependency.class}, provider.getDependencies().toArray());
+            }
 
         }
     }
@@ -179,13 +252,6 @@ class ContainerTest {
 
 }
 
-interface Component {
-
-}
-
-interface Dependency {
-
-}
 
 class ComponentWithDefaultConstructor implements Component {
 
