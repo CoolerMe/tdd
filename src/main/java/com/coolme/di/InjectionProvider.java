@@ -22,6 +22,7 @@ class InjectionProvider<Type> implements Provider<Type> {
         this.fields = getFields(implementation);
         this.methods = getMethods(implementation);
 
+
     }
 
 
@@ -59,6 +60,11 @@ class InjectionProvider<Type> implements Provider<Type> {
     }
 
     private static <Type> Constructor<Type> getConstructor(Class<Type> implementation) {
+
+        if (Modifier.isAbstract(implementation.getModifiers())) {
+            throw new IllegalComponentException();
+        }
+
         List<Constructor<?>> injectConstructors = stream(implementation.getConstructors())
                 .filter(it -> it.isAnnotationPresent(Inject.class))
                 .toList();
@@ -99,6 +105,12 @@ class InjectionProvider<Type> implements Provider<Type> {
         }
         Collections.reverse(methodList);
 
+        boolean genericMethodFound = methodList.stream()
+                .anyMatch(method -> method.getTypeParameters().length != 0);
+
+        if (genericMethodFound) {
+            throw new IllegalComponentException();
+        }
         return methodList;
     }
 
@@ -111,6 +123,13 @@ class InjectionProvider<Type> implements Provider<Type> {
                     .filter(it -> it.isAnnotationPresent(Inject.class))
                     .toList());
             current = current.getSuperclass();
+        }
+
+        boolean finalFieldFound = fieldList.stream()
+                .anyMatch(field -> Modifier.isFinal(field.getModifiers()));
+
+        if (finalFieldFound) {
+            throw new IllegalComponentException();
         }
 
         return fieldList;

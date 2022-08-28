@@ -34,8 +34,20 @@ class ContainerTest {
             assertSame(config.getContext().get(Component.class).get(), component);
         }
 
-        // TODO sad interface
-        // TODO sad abstract class
+        // sad abstract class
+        @Test
+        public void should_throw_exception_if_bind_abstract_class() {
+            assertThrows(IllegalComponentException.class, () -> new InjectionProvider<>(AbstractComponent.class));
+
+        }
+
+        // sad interface
+        @Test
+        public void should_throw_exception_if_bind_interface() {
+            assertThrows(IllegalComponentException.class, () -> new InjectionProvider<>(Component.class));
+        }
+
+
         @Nested
         public class ConstructionInjection {
 
@@ -100,16 +112,6 @@ class ContainerTest {
                 });
             }
 
-            // dependency not exists
-            @Test
-            public void should_throw_exception_if_dependency_not_exists() {
-
-                config.bind(Component.class, ComponentWithInjectConstructor.class);
-
-                DependencyNotFoundException exception = assertThrows(DependencyNotFoundException.class, () -> config.getContext());
-                assertEquals(Dependency.class, exception.getDependency());
-
-            }
 
             @Test
             public void should_return_empty_if_component_not_defined() {
@@ -155,7 +157,6 @@ class ContainerTest {
             // A->B->C
             @Test
             public void should_throw_exception_if_transitive_dependencies_not_found() {
-                config.bind(Component.class, ComponentWithInjectConstructor.class);
                 config.bind(Dependency.class, DependencyWithInjectConstructor.class);
 
                 DependencyNotFoundException exception = assertThrows(DependencyNotFoundException.class, () -> config.getContext());
@@ -208,6 +209,29 @@ class ContainerTest {
 
                 SubComponentWithInjectFiled component = config.getContext().get(SubComponentWithInjectFiled.class).get();
                 assertSame(dependency, component.dependency);
+            }
+
+            static class ComponentWithFinalFiled implements Component {
+                @Inject
+                final Dependency dependency = null;
+            }
+
+
+            @Test
+            public void should_throw_exception_if_inject_filed_is_final() {
+                assertThrows(IllegalComponentException.class, () -> new InjectionProvider<>(ComponentWithFinalFiled.class));
+            }
+
+            static class ComponentWithGenericFiled<T> implements Component {
+                @Inject
+                <T> void install() {
+
+                }
+            }
+
+            @Test
+            public void should_throw_exception_if_inject_method_is_generic() {
+                assertThrows(IllegalComponentException.class, () -> new InjectionProvider<>(ComponentWithGenericFiled.class));
             }
         }
 
@@ -318,6 +342,14 @@ class ContainerTest {
 class ComponentWithDefaultConstructor implements Component {
 
     public ComponentWithDefaultConstructor() {
+    }
+}
+
+abstract class AbstractComponent implements Component {
+
+    @Inject
+    public AbstractComponent() {
+
     }
 }
 
