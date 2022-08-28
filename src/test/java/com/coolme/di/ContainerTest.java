@@ -21,6 +21,26 @@ class ContainerTest {
 
     @Nested
     public class DependencyInject {
+
+        //  instance injection
+        @Test
+        public void should_bind_to_type_with_a_specified_instance() {
+            Component component = new Component() {
+            };
+            config.bind(Component.class, component);
+
+            assertSame(config.getContext().get(Component.class).get(), component);
+        }
+
+
+        // sad path
+        @Test
+        public void should_throw_exception_if_inject_field_not_found() {
+            config.bind(ComponentWithInjectFiled.class, ComponentWithInjectFiled.class);
+
+            assertThrows(DependencyNotFoundException.class, () -> config.getContext());
+        }
+
         // A->B->A
         @Test
         public void should_throw_exception_if_cyclic_dependency_exists() {
