@@ -7,9 +7,11 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.function.BiFunction;
 import java.util.stream.Stream;
 
 import static java.util.Arrays.stream;
+import static java.util.stream.Stream.*;
 
 class InjectionProvider<Type> implements Provider<Type> {
 
@@ -22,25 +24,23 @@ class InjectionProvider<Type> implements Provider<Type> {
         this.fields = getFields(implementation);
         this.methods = getMethods(implementation);
 
-
+        checkFinalField();
+        checkGenericMethod();
     }
 
 
     @Override
     public Type get(Context context) {
         try {
-            Object[] objects = stream(constructor.getParameters())
-                    .map(it -> context.get(it.getType()).get())
-                    .toArray();
+            Object[] objects = toDependencies(context, constructor);
             Type instance = constructor.newInstance(objects);
+
             for (Field field : fields) {
-                field.set(instance, context.get(field.getType()).get());
+                field.set(instance, toDependency(context, field));
             }
 
             for (Method method : methods) {
-                Object[] args = stream(method.getParameters())
-                        .map(parameter -> context.get(parameter.getType()).get()).toArray();
-                method.invoke(instance, args);
+                method.invoke(instance, toDependencies(context, method));
             }
             return instance;
         } catch (InstantiationException | IllegalAccessException | InvocationTargetException e) {
@@ -48,26 +48,40 @@ class InjectionProvider<Type> implements Provider<Type> {
         }
     }
 
+
     @Override
     public List<Class<?>> getDependencies() {
-        return Stream.concat(methods.stream().<Class<?>>
-                                flatMap(method -> stream(method.getParameters())
-                                .map(Parameter::getType)),
-                        Stream.concat(stream(constructor.getParameters()).map(Parameter::getType),
+        return concat(methods.stream().flatMap(method -> stream(method.getParameterTypes())),
+                        concat(stream(constructor.getParameters()).map(Parameter::getType),
                                 fields.stream().map(Field::getType)
                         ))
                 .toList();
     }
 
-    private static <Type> Constructor<Type> getConstructor(Class<Type> implementation) {
+    private void checkGenericMethod() {
+        boolean genericMethodFound = methods.stream()
+                .anyMatch(method -> method.getTypeParameters().length != 0);
 
+        if (genericMethodFound) {
+            throw new IllegalComponentException();
+        }
+    }
+
+    private void checkFinalField() {
+        boolean finalFieldFound = fields.stream()
+                .anyMatch(field -> Modifier.isFinal(field.getModifiers()));
+
+        if (finalFieldFound) {
+            throw new IllegalComponentException();
+        }
+    }
+
+    private static <Type> Constructor<Type> getConstructor(Class<Type> implementation) {
         if (Modifier.isAbstract(implementation.getModifiers())) {
             throw new IllegalComponentException();
         }
 
-        List<Constructor<?>> injectConstructors = stream(implementation.getConstructors())
-                .filter(it -> it.isAnnotationPresent(Inject.class))
-                .toList();
+        List<Constructor<?>> injectConstructors = injectables(implementation.getConstructors()).toList();
 
         if (injectConstructors.size() > 1) {
             throw new MultiInjectConstructorsException();
@@ -75,64 +89,78 @@ class InjectionProvider<Type> implements Provider<Type> {
 
         return (Constructor<Type>) injectConstructors.stream()
                 .findFirst()
-                .orElseGet(() -> {
-                    try {
-                        return implementation.getDeclaredConstructor();
-                    } catch (NoSuchMethodException e) {
-                        throw new IllegalComponentException();
-                    }
-                });
+                .orElseGet(() -> defaultConstructor(implementation));
     }
 
-    private static List<Method> getMethods(Class<?> implementation) {
 
-        List<Method> methodList = new ArrayList<>();
-        Class<?> current = implementation;
-        while (current != Object.class) {
-            methodList.addAll(Stream.of(current.getDeclaredMethods())
-                    .filter(it -> it.isAnnotationPresent(Inject.class))
-                    .filter(newMethod -> methodList.stream()
-                            .noneMatch(oldMethod -> oldMethod.getName().equals(newMethod.getName())
-                                    && Arrays.equals(oldMethod.getParameters(), newMethod.getParameters())
-                            ))
-                    .filter(newMethod -> stream(implementation.getDeclaredMethods())
-                            .filter(m2 -> !m2.isAnnotationPresent(Inject.class))
-                            .noneMatch(oldMethod -> oldMethod.getName().equals(newMethod.getName())
-                                    && Arrays.equals(oldMethod.getParameters(), newMethod.getParameters())))
-
-                    .toList());
-            current = current.getSuperclass();
-        }
-        Collections.reverse(methodList);
-
-        boolean genericMethodFound = methodList.stream()
-                .anyMatch(method -> method.getTypeParameters().length != 0);
-
-        if (genericMethodFound) {
+    private static <Type> Constructor<Type> defaultConstructor(Class<Type> implementation) {
+        try {
+            return implementation.getDeclaredConstructor();
+        } catch (NoSuchMethodException e) {
             throw new IllegalComponentException();
         }
-        return methodList;
+    }
+
+
+    private static Stream<Method> getMethodStream(Class<?> current) {
+        return injectables(current.getDeclaredMethods());
     }
 
     private static List<Field> getFields(Class<?> implementation) {
-        List<Field> fieldList = new ArrayList<>();
+        return traverse(implementation, (fields, current) -> injectables(current.getDeclaredFields()).toList());
+    }
+
+    private static <T> List<T> traverse(Class<?> implementation, BiFunction<List<T>, Class<?>, List<T>> finder) {
+        List<T> members = new ArrayList<>();
 
         Class<?> current = implementation;
         while (current != Object.class) {
-            fieldList.addAll(stream(current.getDeclaredFields())
-                    .filter(it -> it.isAnnotationPresent(Inject.class))
-                    .toList());
+            members.addAll(finder.apply(members, current));
             current = current.getSuperclass();
         }
 
-        boolean finalFieldFound = fieldList.stream()
-                .anyMatch(field -> Modifier.isFinal(field.getModifiers()));
-
-        if (finalFieldFound) {
-            throw new IllegalComponentException();
-        }
-
-        return fieldList;
+        return members;
     }
 
+    private static List<Method> getMethods(Class<?> implementation) {
+        List<Method> list = traverse(implementation, (methods, current) -> getMethodStream(current)
+                .filter(method -> isOverrideByInjectMethod(methods, method))
+                .filter(method -> isOverrideByNoInjectMethod(implementation, method))
+                .toList());
+
+        Collections.reverse(list);
+        return list;
+    }
+
+    private static <T extends AnnotatedElement> Stream<T> injectables(T[] elements) {
+        return stream(elements)
+                .filter(it -> it.isAnnotationPresent(Inject.class));
+    }
+
+    private static boolean isOverrideByNoInjectMethod(Class<?> implementation, Method subMethod) {
+        return stream(implementation.getDeclaredMethods())
+                .filter(method -> !method.isAnnotationPresent(Inject.class))
+                .noneMatch(superMethod -> isOverride(subMethod, superMethod));
+    }
+
+    private static boolean isOverrideByInjectMethod(List<Method> methods, Method method) {
+        return methods.stream()
+                .noneMatch(superMethod -> isOverride(method, superMethod));
+    }
+
+    private static boolean isOverride(Method source, Method target) {
+        return target.getName().equals(source.getName())
+                && Arrays.equals(target.getParameters(), source.getParameters());
+    }
+
+    private static Object toDependency(Context context, Field field) {
+        return context.get(field.getType()).get();
+    }
+
+
+    private static Object[] toDependencies(Context context, Executable executable) {
+        return stream(executable.getParameters())
+                .map(parameter -> context.get(parameter.getType()).get())
+                .toArray();
+    }
 }

@@ -66,7 +66,6 @@ class ContainerTest {
 
             CyclicDependencyException exception = assertThrows(CyclicDependencyException.class, () -> config.getContext());
 
-            exception.getComponents().forEach(System.out::println);
             Set<Class<?>> components = exception.getComponents();
             assertEquals(3, components.size());
             assertTrue(components.contains(Component.class));
