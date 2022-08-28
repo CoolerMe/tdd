@@ -4,6 +4,8 @@ import jakarta.inject.Inject;
 
 import java.lang.reflect.*;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.Stream;
 
@@ -77,9 +79,27 @@ class InjectionProvider<Type> implements Provider<Type> {
     }
 
     private static List<Method> getMethods(Class<?> implementation) {
-        return Stream.of(implementation.getDeclaredMethods())
-                .filter(it -> it.isAnnotationPresent(Inject.class))
-                .toList();
+
+        List<Method> methodList = new ArrayList<>();
+        Class<?> current = implementation;
+        while (current != Object.class) {
+            methodList.addAll(Stream.of(current.getDeclaredMethods())
+                    .filter(it -> it.isAnnotationPresent(Inject.class))
+                    .filter(newMethod -> methodList.stream()
+                            .noneMatch(oldMethod -> oldMethod.getName().equals(newMethod.getName())
+                                    && Arrays.equals(oldMethod.getParameters(), newMethod.getParameters())
+                            ))
+                    .filter(newMethod -> stream(implementation.getDeclaredMethods())
+                            .filter(m2 -> !m2.isAnnotationPresent(Inject.class))
+                            .noneMatch(oldMethod -> oldMethod.getName().equals(newMethod.getName())
+                                    && Arrays.equals(oldMethod.getParameters(), newMethod.getParameters())))
+
+                    .toList());
+            current = current.getSuperclass();
+        }
+        Collections.reverse(methodList);
+
+        return methodList;
     }
 
     private static List<Field> getFields(Class<?> implementation) {
