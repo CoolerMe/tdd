@@ -1,33 +1,60 @@
 package com.coolme.di;
 
 import jakarta.inject.Inject;
+import jakarta.inject.Provider;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
 
+import java.lang.reflect.ParameterizedType;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 @Nested
 public class InjectionTest {
 
 
-    private final Dependency dependency = Mockito.mock(Dependency.class);
+    private final Dependency dependency = mock(Dependency.class);
+    private Provider<Dependency> dependencyProvider = mock(Provider.class);
 
-    private final Context context = Mockito.mock(Context.class);
+    private final Context context = mock(Context.class);
 
     @BeforeEach
-    public void setup() {
-        Mockito.when(context.get(eq(Dependency.class)))
+    public void setup() throws NoSuchFieldException {
+
+        ParameterizedType parameterizedType = (ParameterizedType) InjectionTest.class.getDeclaredField("dependencyProvider").getGenericType();
+        when(context.get(eq(Dependency.class)))
                 .thenReturn(Optional.of(dependency));
+        when(context.get(eq(parameterizedType)))
+                .thenReturn(Optional.of(dependencyProvider));
     }
 
     @Nested
     public class ConstructionInjection {
 
+
+        static class ProviderInjectConstructor {
+
+            private Provider<Dependency> dependency;
+
+            @Inject
+            public ProviderInjectConstructor(Provider<Dependency> dependency) {
+                this.dependency = dependency;
+            }
+        }
+
+        // inject construct
+        @Test
+        public void should_inject_dependency_via_inject_constructor() {
+            InjectionProvider<ProviderInjectConstructor> provider = new InjectionProvider<>(ProviderInjectConstructor.class);
+            ProviderInjectConstructor providerInjectConstructor = provider.get(context);
+
+            assertSame(providerInjectConstructor.dependency, dependencyProvider);
+        }
 
         // sad abstract class
         @Test
@@ -82,6 +109,20 @@ public class InjectionTest {
     @Nested
     public class FieldInjection {
 
+        // inject filed
+        static class ProviderInjectField {
+
+            @Inject
+            Provider<Dependency> dependency;
+
+        }
+
+        @Test
+        public void should_inject_dependency_via_inject_field() {
+            ProviderInjectField providerInjectField = new InjectionProvider<>(ProviderInjectField.class).get(context);
+
+            assertSame(providerInjectField.dependency, dependencyProvider);
+        }
 
         @Test
         public void should_inject_dependency_via_filed() {
@@ -134,12 +175,29 @@ public class InjectionTest {
     @Nested
     public class MethodInjection {
 
+        static class ProviderInjectMethod {
+
+            private Provider<Dependency> dependency;
+
+            @Inject
+            public void install(Provider<Dependency> dependency) {
+                this.dependency = dependency;
+            }
+        }
+
+        // inject method
+        @Test
+        public void should_inject_provider_dependency_via_inject_method() {
+            ProviderInjectMethod providerInjectMethod = new InjectionProvider<>(ProviderInjectMethod.class).get(context);
+
+            assertSame(providerInjectMethod.dependency, dependencyProvider);
+        }
+
         @Test
         public void should_call_method_if_inject_annotation_added() {
             ComponentWithInjectMethod component = new InjectionProvider<>(ComponentWithInjectMethod.class).get(context);
 
             assertTrue(component.called);
-
         }
 
         @Test

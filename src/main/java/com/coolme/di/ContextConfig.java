@@ -1,13 +1,16 @@
 package com.coolme.di;
 
+import jakarta.inject.Provider;
+
+import java.lang.reflect.ParameterizedType;
 import java.util.*;
 
 public class ContextConfig {
 
-    private final Map<Class<?>, Provider<?>> providers = new HashMap<>();
+    private final Map<Class<?>, DiProvider<?>> providers = new HashMap<>();
 
     public <Type> void bind(Class<Type> type, Type instance) {
-        providers.put(type, new Provider<Type>() {
+        providers.put(type, new DiProvider<Type>() {
             @Override
             public Type get(Context context) {
                 return instance;
@@ -34,6 +37,17 @@ public class ContextConfig {
             public <Type> Optional<Type> get(Class<Type> type) {
                 return Optional.ofNullable(providers.get(type))
                         .map(it -> (Type) it.get(this));
+            }
+
+            @Override
+            public Optional get(ParameterizedType type) {
+                if (type.getRawType() != Provider.class) {
+                    return Optional.empty();
+                }
+                Class<?> componentClass = (Class<?>) type.getActualTypeArguments()[0];
+                return Optional.ofNullable(providers.get(componentClass))
+                        .map(provider -> (Provider<Object>) (() -> provider.get(this)));
+
             }
         };
     }

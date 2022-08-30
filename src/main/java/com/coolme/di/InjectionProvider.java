@@ -13,7 +13,7 @@ import java.util.stream.Stream;
 import static java.util.Arrays.stream;
 import static java.util.stream.Stream.*;
 
-class InjectionProvider<Type> implements Provider<Type> {
+class InjectionProvider<Type> implements DiProvider<Type> {
 
     private final Constructor<Type> constructor;
     private final List<Field> fields;
@@ -52,9 +52,9 @@ class InjectionProvider<Type> implements Provider<Type> {
     @Override
     public List<Class<?>> getDependencies() {
         return concat(methods.stream().flatMap(method -> stream(method.getParameterTypes())),
-                        concat(stream(constructor.getParameters()).map(Parameter::getType),
-                                fields.stream().map(Field::getType)
-                        ))
+                concat(stream(constructor.getParameters()).map(Parameter::getType),
+                        fields.stream().map(Field::getType)
+                ))
                 .toList();
     }
 
@@ -154,13 +154,25 @@ class InjectionProvider<Type> implements Provider<Type> {
     }
 
     private static Object toDependency(Context context, Field field) {
-        return context.get(field.getType()).get();
+        java.lang.reflect.Type type = field.getGenericType();
+        if (type instanceof ParameterizedType) {
+            return context.get((ParameterizedType) type).get();
+        } else {
+            return context.get((Class<?>) type).get();
+        }
     }
 
 
     private static Object[] toDependencies(Context context, Executable executable) {
         return stream(executable.getParameters())
-                .map(parameter -> context.get(parameter.getType()).get())
-                .toArray();
+                .map(p -> {
+                    java.lang.reflect.Type parameterizedType = p.getParameterizedType();
+                    if (parameterizedType instanceof ParameterizedType) {
+                        return context.get((ParameterizedType) parameterizedType).get();
+                    } else {
+                        return context.get((Class<?>) parameterizedType).get();
+                    }
+
+                }).toArray(Object[]::new);
     }
 }

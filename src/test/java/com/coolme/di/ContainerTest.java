@@ -1,10 +1,13 @@
 package com.coolme.di;
 
 import jakarta.inject.Inject;
+import jakarta.inject.Provider;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
+import java.lang.reflect.ParameterizedType;
+import java.util.List;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -21,6 +24,7 @@ class ContainerTest {
 
     @Nested
     public class DependencyInject {
+
 
         //  instance injection
         @Test
@@ -84,6 +88,44 @@ class ContainerTest {
             assertEquals(String.class, exception.getDependency());
             assertEquals(Dependency.class, exception.getComponent());
         }
+
+
+        // could get Provider<T> from context
+        @Test
+        public void should_retrieve_bind_as_provider() {
+            Component instance = new Component() {
+            };
+            config.bind(Component.class, instance);
+            Context context = config.getContext();
+
+            ParameterizedType type = new TypeLiteral<Provider<Component>>() {
+            }.getType();
+
+            Provider<Component> provider = (Provider<Component>) context.get(type).get();
+            assertSame(provider.get(), instance);
+
+        }
+
+        @Test
+        public void should_retrieve_bind_as_unsupported_container() {
+            Component instance = new Component() {
+            };
+            config.bind(Component.class, instance);
+            Context context = config.getContext();
+
+            ParameterizedType type = new TypeLiteral<List<Component>>() {
+            }.getType();
+            assertFalse(context.get(type).isPresent());
+
+        }
+
+        static abstract class TypeLiteral<T> {
+
+            public ParameterizedType getType() {
+                return (ParameterizedType) ((ParameterizedType) getClass().getGenericSuperclass()).getActualTypeArguments()[0];
+            }
+        }
+
     }
 
 

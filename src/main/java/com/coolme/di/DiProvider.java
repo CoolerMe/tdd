@@ -2,7 +2,7 @@ package com.coolme.di;
 
 import java.util.List;
 
-interface Provider<Type> {
+interface DiProvider<Type> {
     Type get(Context context);
 
     List<Class<?>> getDependencies();
