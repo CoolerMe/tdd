@@ -10,17 +10,7 @@ public class ContextConfig {
     private final Map<Class<?>, DiProvider<?>> providers = new HashMap<>();
 
     public <Type> void bind(Class<Type> type, Type instance) {
-        providers.put(type, new DiProvider<Type>() {
-            @Override
-            public Type get(Context context) {
-                return instance;
-            }
-
-            @Override
-            public List<Class<?>> getDependencies() {
-                return List.of();
-            }
-        });
+        providers.put(type, context -> instance);
     }
 
     public <Type, Implementation extends Type> void bind(Class<Type> type, Class<Implementation> implementation) {

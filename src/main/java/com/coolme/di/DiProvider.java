@@ -5,5 +5,11 @@ import java.util.List;
 interface DiProvider<Type> {
     Type get(Context context);
 
-    List<Class<?>> getDependencies();
+    default List<Class<?>> getDependencies() {
+        return List.of();
+    }
+
+    default List<java.lang.reflect.Type> getDependencyTypes() {
+        return List.of();
+    }
 }
