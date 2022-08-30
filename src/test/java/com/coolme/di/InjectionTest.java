@@ -183,6 +183,8 @@ public class InjectionTest {
             assertThrows(IllegalComponentException.class,
                     () -> new InjectionProvider<>(FieldInjection.ComponentWithGenericFiled.class));
         }
+
+
     }
 
     @Nested

@@ -126,6 +126,30 @@ class ContainerTest {
             }
         }
 
+        static class CyclicDependencyProviderConstructor implements Component {
+
+            @Inject
+            public CyclicDependencyProviderConstructor(Provider<Dependency> dependency) {
+            }
+        }
+
+        static class CyclicComponentProviderConstructor implements Dependency {
+
+            @Inject
+            public CyclicComponentProviderConstructor(Provider<Component> dependency) {
+            }
+        }
+
+        @Test
+        public void should_not_throw_exception_if_cyclic_dependencies_vi_provider() {
+            config.bind(Component.class, CyclicDependencyProviderConstructor.class);
+            config.bind(Dependency.class, CyclicComponentProviderConstructor.class);
+
+            Context context = config.getContext();
+
+            assertTrue(context.get(Component.class).isPresent());
+        }
+
     }
 
 

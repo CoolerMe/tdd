@@ -8,11 +8,10 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.function.BiFunction;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static java.util.Arrays.stream;
-import static java.util.stream.Stream.*;
+import static java.util.stream.Stream.concat;
 
 class InjectionProvider<Type> implements DiProvider<Type> {
 
@@ -61,9 +60,10 @@ class InjectionProvider<Type> implements DiProvider<Type> {
 
     @Override
     public List<java.lang.reflect.Type> getDependencyTypes() {
-        return stream(constructor.getParameters())
-                .map(Parameter::getParameterizedType)
-                .collect(Collectors.toList());
+        return concat(concat(stream(constructor.getParameters()).map(Parameter::getParameterizedType)
+                        , fields.stream().map(Field::getGenericType)),
+                methods.stream().flatMap(m -> stream(m.getParameters()).map(Parameter::getParameterizedType)))
+                .toList();
     }
 
     private void checkGenericMethod() {
