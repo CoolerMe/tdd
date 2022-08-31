@@ -13,11 +13,11 @@ public class ContextConfig {
 
     private final Map<Class<?>, DiProvider<?>> providers = new HashMap<>();
 
-    public <Type> void bind(Class<Type> type, Type instance) {
+    public <T> void bind(Class<T> type, T instance) {
         providers.put(type, context -> instance);
     }
 
-    public <Type, Implementation extends Type> void bind(Class<Type> type, Class<Implementation> implementation) {
+    public <T, I extends T> void bind(Class<T> type, Class<I> implementation) {
         providers.put(type, new InjectionProvider<>(implementation));
     }
 
@@ -27,14 +27,23 @@ public class ContextConfig {
                 .forEach(component -> checkDependencies(component, new Stack<>()));
 
         return new Context() {
+
             @Override
-            public <T> Optional<T> get(Class<T> type) {
+            public Optional get(Type type) {
+                if (isContainerType(type)) {
+                    return get((ParameterizedType) type);
+                } else {
+                    return get((Class<?>) type);
+                }
+            }
+
+            private <T> Optional<T> get(Class<T> type) {
                 return Optional.ofNullable(providers.get(type))
                         .map(it -> (T) it.get(this));
             }
 
-            @Override
-            public Optional get(ParameterizedType type) {
+
+            private Optional get(ParameterizedType type) {
                 if (type.getRawType() != Provider.class) {
                     return Optional.empty();
                 }
@@ -42,7 +51,13 @@ public class ContextConfig {
                 return Optional.ofNullable(providers.get(componentClass))
                         .map(provider -> (Provider<Object>) (() -> provider.get(this)));
             }
+
+
         };
+    }
+
+    private static boolean isContainerType(Type type) {
+        return type instanceof ParameterizedType;
     }
 
     private void checkDependencies(Class<?> component, Stack<Class<?>> visiting) {
@@ -51,7 +66,7 @@ public class ContextConfig {
                 checkDependencies(component, visiting, (Class<?>) dependency);
             }
 
-            if (dependency instanceof ParameterizedType) {
+            if (isContainerType(dependency)) {
                 Class<?> type = (Class<?>) ((ParameterizedType) dependency).getActualTypeArguments()[0];
                 if (!providers.containsKey(type)) {
                     throw new DependencyNotFoundException(component, type);
