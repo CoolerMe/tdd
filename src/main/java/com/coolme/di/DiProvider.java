@@ -1,15 +1,16 @@
 package com.coolme.di;
 
+import java.lang.reflect.Type;
 import java.util.List;
 
-interface DiProvider<Type> {
-    Type get(Context context);
+interface DiProvider<T> {
+    T get(Context context);
 
     default List<Class<?>> getDependencies() {
         return List.of();
     }
 
-    default List<java.lang.reflect.Type> getDependencyTypes() {
+    default List<Type> getDependencyTypes() {
         return List.of();
     }
 }

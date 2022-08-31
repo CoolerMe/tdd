@@ -13,13 +13,13 @@ import java.util.stream.Stream;
 import static java.util.Arrays.stream;
 import static java.util.stream.Stream.concat;
 
-class InjectionProvider<Type> implements DiProvider<Type> {
+class InjectionProvider<T> implements DiProvider<T> {
 
-    private final Constructor<Type> constructor;
+    private final Constructor<T> constructor;
     private final List<Field> fields;
     private final List<Method> methods;
 
-    public InjectionProvider(Class<Type> implementation) {
+    public InjectionProvider(Class<T> implementation) {
         this.constructor = getConstructor(implementation);
         this.fields = getFields(implementation);
         this.methods = getMethods(implementation);
@@ -30,10 +30,10 @@ class InjectionProvider<Type> implements DiProvider<Type> {
 
 
     @Override
-    public Type get(Context context) {
+    public T get(Context context) {
         try {
             Object[] objects = toDependencies(context, constructor);
-            Type instance = constructor.newInstance(objects);
+            T instance = constructor.newInstance(objects);
 
             for (Field field : fields) {
                 field.set(instance, toDependency(context, field));
@@ -162,25 +162,20 @@ class InjectionProvider<Type> implements DiProvider<Type> {
     }
 
     private static Object toDependency(Context context, Field field) {
-        java.lang.reflect.Type type = field.getGenericType();
-        if (type instanceof ParameterizedType) {
-            return context.get((ParameterizedType) type).get();
-        } else {
-            return context.get((Class<?>) type).get();
-        }
+        Type type = field.getGenericType();
+        return toDependency(context, type);
+    }
+
+    private static Object toDependency(Context context, Type type) {
+        return context.getType(type).get();
     }
 
 
     private static Object[] toDependencies(Context context, Executable executable) {
         return stream(executable.getParameters())
                 .map(p -> {
-                    java.lang.reflect.Type parameterizedType = p.getParameterizedType();
-                    if (parameterizedType instanceof ParameterizedType) {
-                        return context.get((ParameterizedType) parameterizedType).get();
-                    } else {
-                        return context.get((Class<?>) parameterizedType).get();
-                    }
-
+                    Type type = p.getParameterizedType();
+                    return toDependency(context, type);
                 }).toArray(Object[]::new);
     }
 }
