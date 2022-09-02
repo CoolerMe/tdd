@@ -8,6 +8,7 @@ import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.ParameterizedType;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -33,7 +34,7 @@ class ContainerTest {
             };
             config.bind(Component.class, component);
 
-            assertSame(config.getContext().get(Component.class).get(), component);
+            assertSame(((Optional) config.getContext().get(Context.Ref.of(Component.class))).get(), component);
         }
 
 
@@ -98,10 +99,8 @@ class ContainerTest {
             config.bind(Component.class, instance);
             Context context = config.getContext();
 
-            ParameterizedType type = new TypeLiteral<Provider<Component>>() {
-            }.getType();
-
-            Provider<Component> provider = (Provider<Component>) context.get(type).get();
+            Provider<Component> provider = context.get(new Context.Ref<Provider<Component>>() {
+            }).get();
             assertSame(provider.get(), instance);
 
         }
@@ -113,9 +112,9 @@ class ContainerTest {
             config.bind(Component.class, instance);
             Context context = config.getContext();
 
-            ParameterizedType type = new TypeLiteral<List<Component>>() {
-            }.getType();
-            assertFalse(context.get(type).isPresent());
+            Optional<List<Component>> components = context.get(new Context.Ref<>() {
+            });
+            assertFalse(components.isPresent());
 
         }
 
@@ -146,8 +145,7 @@ class ContainerTest {
             config.bind(Dependency.class, CyclicComponentProviderConstructor.class);
 
             Context context = config.getContext();
-
-            assertTrue(context.get(Component.class).isPresent());
+            assertTrue(context.get(Context.Ref.of(Component.class)).isPresent());
         }
 
     }

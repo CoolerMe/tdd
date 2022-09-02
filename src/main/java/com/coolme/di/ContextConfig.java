@@ -2,7 +2,6 @@ package com.coolme.di;
 
 import jakarta.inject.Provider;
 
-import java.lang.reflect.Type;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -10,7 +9,7 @@ import java.util.Stack;
 
 public class ContextConfig {
 
-    private final Map<Class<?>, DiProvider<?>> providers = new HashMap<>();
+    private final Map<Class<?>, ComponentProvider<?>> providers = new HashMap<>();
 
     public <T> void bind(Class<T> type, T instance) {
         providers.put(type, context -> instance);
@@ -27,11 +26,7 @@ public class ContextConfig {
         return new Context() {
 
             @Override
-            public Optional get(Type type) {
-                return get(Ref.of(type));
-            }
-
-            private Optional<?> get(Ref ref) {
+            public Optional get(Ref ref) {
                 if (ref.isContainer()) {
                     if (ref.getContainer() != Provider.class) {
                         return Optional.empty();
@@ -47,19 +42,17 @@ public class ContextConfig {
 
 
     private void checkDependencies(Class<?> component, Stack<Class<?>> visiting) {
-        for (Type dependency : providers.get(component).getDependencyTypes()) {
-            Ref ref = Ref.of(dependency);
-
-            if (!providers.containsKey(ref.getComponent())) {
-                throw new DependencyNotFoundException(component, ref.getComponent());
+        for (Context.Ref dependency : providers.get(component).getDependenciesRef()) {
+            if (!providers.containsKey(dependency.getComponent())) {
+                throw new DependencyNotFoundException(component, dependency.getComponent());
             }
 
-            if (!ref.isContainer()) {
-                if (visiting.contains(ref.getComponent())) {
+            if (!dependency.isContainer()) {
+                if (visiting.contains(dependency.getComponent())) {
                     throw new CyclicDependencyException(visiting);
                 }
-                visiting.push(ref.getComponent());
-                checkDependencies(ref.getComponent(), visiting);
+                visiting.push(dependency.getComponent());
+                checkDependencies(dependency.getComponent(), visiting);
                 visiting.pop();
 
             }
