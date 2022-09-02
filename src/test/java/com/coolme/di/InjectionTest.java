@@ -29,7 +29,7 @@ public class InjectionTest {
     public void setup() throws NoSuchFieldException {
 
         parameterizedType = (ParameterizedType) InjectionTest.class.getDeclaredField("dependencyProvider").getGenericType();
-        when((Optional) context.get(eq(Context.Ref.of(Dependency.class))))
+        when((Optional) context.get(eq(Context.Ref.of(Dependency.class, null))))
                 .thenReturn(Optional.of(dependency));
         when(context.get(eq(Context.Ref.of(parameterizedType))))
                 .thenReturn(Optional.of(dependencyProvider));
@@ -148,7 +148,7 @@ public class InjectionTest {
         public void should_include_field_dependency_in_dependencies() {
             InjectionProvider<ComponentWithInjectFiled> provider = new InjectionProvider<>(ComponentWithInjectFiled.class);
 
-            assertArrayEquals(new Context.Ref[]{Context.Ref.of(Dependency.class)}, provider.getDependenciesRef().toArray());
+            assertArrayEquals(new Context.Ref[]{Context.Ref.of(Dependency.class, null)}, provider.getDependenciesRef().toArray());
         }
 
         @Test
@@ -228,7 +228,7 @@ public class InjectionTest {
         public void should_include_method_dependency_in_dependencies() {
             InjectionProvider<ComponentWithInjectMethodAndDependency> provider = new InjectionProvider<>(ComponentWithInjectMethodAndDependency.class);
 
-            assertArrayEquals(new Context.Ref[]{Context.Ref.of(Dependency.class)}, provider.getDependenciesRef().toArray());
+            assertArrayEquals(new Context.Ref[]{Context.Ref.of(Dependency.class, null)}, provider.getDependenciesRef().toArray());
         }
 
 

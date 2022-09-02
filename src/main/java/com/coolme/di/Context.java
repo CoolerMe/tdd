@@ -1,5 +1,6 @@
 package com.coolme.di;
 
+import java.lang.annotation.Annotation;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.util.Objects;
@@ -12,21 +13,28 @@ public interface Context {
     class Ref<T> {
         private Type container;
         private Class<?> component;
+        private Annotation qualifer;
 
-        Ref(Type type) {
+        Ref(Type type, Annotation qualifer) {
+            this.qualifer = qualifer;
             init(type);
         }
 
-        Ref(Class<?> component) {
+        Ref(Class<?> component, Annotation qualifer) {
+            this.qualifer = qualifer;
             init(component);
         }
 
-        static <T> Ref<T> of(Class<T> component) {
-            return new Ref(component);
+        static <T> Ref<T> of(Class<T> component, Annotation qualifer) {
+            return new Ref(component, qualifer);
         }
 
         static Ref of(Type type) {
-            return new Ref(type);
+            return new Ref(type, null);
+        }
+
+        static Ref of(Type type, Annotation qualifier) {
+            return new Ref(type, qualifier);
         }
 
         protected Ref() {
@@ -60,17 +68,23 @@ public interface Context {
             if (this == o) return true;
             if (o == null || getClass() != o.getClass()) return false;
 
-            Ref ref = (Ref) o;
+            Ref<?> ref = (Ref<?>) o;
 
             if (!Objects.equals(container, ref.container)) return false;
-            return Objects.equals(component, ref.component);
+            if (!Objects.equals(component, ref.component)) return false;
+            return Objects.equals(qualifer, ref.qualifer);
         }
 
         @Override
         public int hashCode() {
             int result = container != null ? container.hashCode() : 0;
             result = 31 * result + (component != null ? component.hashCode() : 0);
+            result = 31 * result + (qualifer != null ? qualifer.hashCode() : 0);
             return result;
+        }
+
+        public Annotation getQualifer() {
+            return qualifer;
         }
     }
 }

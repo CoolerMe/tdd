@@ -2,11 +2,12 @@ package com.coolme.di;
 
 import jakarta.inject.Inject;
 import jakarta.inject.Provider;
+import jakarta.inject.Qualifier;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
-import java.lang.reflect.ParameterizedType;
+import java.lang.annotation.Annotation;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -27,6 +28,15 @@ class ContainerTest {
     public class DependencyInject {
 
 
+        static record NamedLiteral(String value) implements Annotation {
+
+            @Override
+            public Class<? extends Annotation> annotationType() {
+                return Qualifier.class;
+            }
+
+        }
+
         //  instance injection
         @Test
         public void should_bind_to_type_with_a_specified_instance() {
@@ -34,7 +44,61 @@ class ContainerTest {
             };
             config.bind(Component.class, component);
 
-            assertSame(((Optional) config.getContext().get(Context.Ref.of(Component.class))).get(), component);
+            assertSame(((Optional) config.getContext().get(Context.Ref.of(Component.class, null))).get(), component);
+        }
+
+        // inject with instance qualified
+        @Test
+        public void should_bind_type_with_instance_qualified() {
+            Component component = new Component() {
+            };
+            config.bind(Component.class, component, new NamedLiteral("ChosenOne"));
+
+            assertSame(config.getContext().get(Context.Ref.of(Component.class, new NamedLiteral("ChosenOne"))).get(), component);
+        }
+
+        //  bind type with class qualified
+        @Test
+        public void should_bind_type_with_class_qualified() {
+            Dependency dependency = new Dependency() {
+            };
+            config.bind(Dependency.class, dependency);
+            config.bind(ComponentWithInjectConstructor.class, ComponentWithInjectConstructor.class, new NamedLiteral("ChosenOne"));
+
+            ComponentWithInjectConstructor component = config.getContext().get(Context.Ref.of(ComponentWithInjectConstructor.class, new NamedLiteral("ChosenOne"))).get();
+            assertSame(component.getDependency(), dependency);
+
+
+        }
+
+        // inject with instance muliti qualified
+        @Test
+        public void should_bind_type_with_instance_multi_qualified() {
+            Component component = new Component() {
+            };
+            config.bind(Component.class, component, new NamedLiteral("ChosenOne"), new NamedLiteral("ChosenTwo"));
+
+            assertSame(config.getContext().get(Context.Ref.of(Component.class, new NamedLiteral("ChosenOne"))).get(), component);
+            assertSame(config.getContext().get(Context.Ref.of(Component.class, new NamedLiteral("ChosenTwo"))).get(), component);
+        }
+
+        //  bind type with class qualified
+        @Test
+        public void should_bind_type_with_class__multi_qualified() {
+            Dependency dependency = new Dependency() {
+            };
+            config.bind(Dependency.class, dependency);
+            config.bind(ComponentWithInjectConstructor.class, ComponentWithInjectConstructor.class,
+                    new NamedLiteral("ChosenOne"),
+                    new NamedLiteral("ChosenTwo"));
+
+
+            assertSame(config.getContext().get(Context.Ref.of(ComponentWithInjectConstructor.class,
+                    new NamedLiteral("ChosenOne"))).get().getDependency(), dependency);
+            assertSame(config.getContext().get(Context.Ref.of(ComponentWithInjectConstructor.class,
+                    new NamedLiteral("ChosenTwo"))).get().getDependency(), dependency);
+
+
         }
 
 
@@ -118,13 +182,6 @@ class ContainerTest {
 
         }
 
-        static abstract class TypeLiteral<T> {
-
-            public ParameterizedType getType() {
-                return (ParameterizedType) ((ParameterizedType) getClass().getGenericSuperclass()).getActualTypeArguments()[0];
-            }
-        }
-
         static class CyclicDependencyProviderConstructor implements Component {
 
             @Inject
@@ -145,7 +202,7 @@ class ContainerTest {
             config.bind(Dependency.class, CyclicComponentProviderConstructor.class);
 
             Context context = config.getContext();
-            assertTrue(context.get(Context.Ref.of(Component.class)).isPresent());
+            assertTrue(context.get(Context.Ref.of(Component.class, null)).isPresent());
         }
 
     }
