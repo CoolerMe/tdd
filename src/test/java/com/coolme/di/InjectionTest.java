@@ -290,4 +290,8 @@ public class InjectionTest {
         }
 
     }
+
+    static interface Component {
+
+    }
 }

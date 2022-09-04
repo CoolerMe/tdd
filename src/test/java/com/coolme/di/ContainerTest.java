@@ -40,21 +40,21 @@ class ContainerTest {
         //  instance injection
         @Test
         public void should_bind_to_type_with_a_specified_instance() {
-            Component component = new Component() {
+            InjectionTest.Component component = new InjectionTest.Component() {
             };
-            config.bind(Component.class, component);
+            config.bind(InjectionTest.Component.class, component);
 
-            assertSame(((Optional) config.getContext().get(Context.Ref.of(Component.class, null))).get(), component);
+            assertSame(((Optional) config.getContext().get(Context.Ref.of(InjectionTest.Component.class, null))).get(), component);
         }
 
         // inject with instance qualified
         @Test
         public void should_bind_type_with_instance_qualified() {
-            Component component = new Component() {
+            InjectionTest.Component component = new InjectionTest.Component() {
             };
-            config.bind(Component.class, component, new NamedLiteral("ChosenOne"));
+            config.bind(InjectionTest.Component.class, component, new NamedLiteral("ChosenOne"));
 
-            assertSame(config.getContext().get(Context.Ref.of(Component.class, new NamedLiteral("ChosenOne"))).get(), component);
+            assertSame(config.getContext().get(Context.Ref.of(InjectionTest.Component.class, new NamedLiteral("ChosenOne"))).get(), component);
         }
 
         //  bind type with class qualified
@@ -74,12 +74,12 @@ class ContainerTest {
         // inject with instance muliti qualified
         @Test
         public void should_bind_type_with_instance_multi_qualified() {
-            Component component = new Component() {
+            InjectionTest.Component component = new InjectionTest.Component() {
             };
-            config.bind(Component.class, component, new NamedLiteral("ChosenOne"), new NamedLiteral("ChosenTwo"));
+            config.bind(InjectionTest.Component.class, component, new NamedLiteral("ChosenOne"), new NamedLiteral("ChosenTwo"));
 
-            assertSame(config.getContext().get(Context.Ref.of(Component.class, new NamedLiteral("ChosenOne"))).get(), component);
-            assertSame(config.getContext().get(Context.Ref.of(Component.class, new NamedLiteral("ChosenTwo"))).get(), component);
+            assertSame(config.getContext().get(Context.Ref.of(InjectionTest.Component.class, new NamedLiteral("ChosenOne"))).get(), component);
+            assertSame(config.getContext().get(Context.Ref.of(InjectionTest.Component.class, new NamedLiteral("ChosenTwo"))).get(), component);
         }
 
         //  bind type with class qualified
@@ -113,7 +113,7 @@ class ContainerTest {
         // A->B->A
         @Test
         public void should_throw_exception_if_cyclic_dependency_exists() {
-            config.bind(Component.class, ComponentWithInjectConstructor.class);
+            config.bind(InjectionTest.Component.class, ComponentWithInjectConstructor.class);
             config.bind(Dependency.class, DependencyWithComponentInjected.class);
 
             CyclicDependencyException exception = assertThrows(CyclicDependencyException.class, () -> config.getContext());
@@ -121,7 +121,7 @@ class ContainerTest {
             Set<Class<?>> components = exception.getComponents();
 
             assertEquals(2, components.size());
-            assertTrue(components.contains(Component.class));
+            assertTrue(components.contains(InjectionTest.Component.class));
             assertTrue(components.contains(Dependency.class));
 
         }
@@ -129,7 +129,7 @@ class ContainerTest {
         // A->B->C->A
         @Test
         public void should_throw_exception_of_transitive_cyclic_dependencies_happens() {
-            config.bind(Component.class, ComponentWithInjectConstructor.class);
+            config.bind(InjectionTest.Component.class, ComponentWithInjectConstructor.class);
             config.bind(Dependency.class, DependencyDependentOnAnotherDependency.class);
             config.bind(AnotherDependency.class, AnotherDependencyDependentOnComponent.class);
 
@@ -137,7 +137,7 @@ class ContainerTest {
 
             Set<Class<?>> components = exception.getComponents();
             assertEquals(3, components.size());
-            assertTrue(components.contains(Component.class));
+            assertTrue(components.contains(InjectionTest.Component.class));
             assertTrue(components.contains(Dependency.class));
             assertTrue(components.contains(AnotherDependency.class));
 
@@ -158,12 +158,12 @@ class ContainerTest {
         // could get Provider<T> from context
         @Test
         public void should_retrieve_bind_as_provider() {
-            Component instance = new Component() {
+            InjectionTest.Component instance = new InjectionTest.Component() {
             };
-            config.bind(Component.class, instance);
+            config.bind(InjectionTest.Component.class, instance);
             Context context = config.getContext();
 
-            Provider<Component> provider = context.get(new Context.Ref<Provider<Component>>() {
+            Provider<InjectionTest.Component> provider = context.get(new Context.Ref<Provider<InjectionTest.Component>>() {
             }).get();
             assertSame(provider.get(), instance);
 
@@ -171,18 +171,18 @@ class ContainerTest {
 
         @Test
         public void should_retrieve_bind_as_unsupported_container() {
-            Component instance = new Component() {
+            InjectionTest.Component instance = new InjectionTest.Component() {
             };
-            config.bind(Component.class, instance);
+            config.bind(InjectionTest.Component.class, instance);
             Context context = config.getContext();
 
-            Optional<List<Component>> components = context.get(new Context.Ref<>() {
+            Optional<List<InjectionTest.Component>> components = context.get(new Context.Ref<>() {
             });
             assertFalse(components.isPresent());
 
         }
 
-        static class CyclicDependencyProviderConstructor implements Component {
+        static class CyclicDependencyProviderConstructor implements InjectionTest.Component {
 
             @Inject
             public CyclicDependencyProviderConstructor(Provider<Dependency> dependency) {
@@ -192,17 +192,17 @@ class ContainerTest {
         static class CyclicComponentProviderConstructor implements Dependency {
 
             @Inject
-            public CyclicComponentProviderConstructor(Provider<Component> dependency) {
+            public CyclicComponentProviderConstructor(Provider<InjectionTest.Component> dependency) {
             }
         }
 
         @Test
         public void should_not_throw_exception_if_cyclic_dependencies_vi_provider() {
-            config.bind(Component.class, CyclicDependencyProviderConstructor.class);
+            config.bind(InjectionTest.Component.class, CyclicDependencyProviderConstructor.class);
             config.bind(Dependency.class, CyclicComponentProviderConstructor.class);
 
             Context context = config.getContext();
-            assertTrue(context.get(Context.Ref.of(Component.class, null)).isPresent());
+            assertTrue(context.get(Context.Ref.of(InjectionTest.Component.class, null)).isPresent());
         }
 
     }
@@ -211,13 +211,13 @@ class ContainerTest {
 }
 
 
-class ComponentWithDefaultConstructor implements Component {
+class ComponentWithDefaultConstructor implements InjectionTest.Component {
 
     public ComponentWithDefaultConstructor() {
     }
 }
 
-abstract class AbstractComponent implements Component {
+abstract class AbstractComponent implements InjectionTest.Component {
 
     @Inject
     public AbstractComponent() {
@@ -225,7 +225,7 @@ abstract class AbstractComponent implements Component {
     }
 }
 
-class ComponentWithMultiInjectConstructors implements Component {
+class ComponentWithMultiInjectConstructors implements InjectionTest.Component {
     private String content;
     private Double decimal;
 
@@ -243,7 +243,7 @@ class ComponentWithMultiInjectConstructors implements Component {
 
 }
 
-class ComponentWithNoDefaultConstructorNorInjectConstructor implements Component {
+class ComponentWithNoDefaultConstructorNorInjectConstructor implements InjectionTest.Component {
 
     private String name;
 
@@ -256,7 +256,7 @@ class ComponentWithNoDefaultConstructorNorInjectConstructor implements Component
 }
 
 
-class ComponentWithInjectConstructor implements Component {
+class ComponentWithInjectConstructor implements InjectionTest.Component {
 
     private Dependency dependency;
 
@@ -272,10 +272,10 @@ class ComponentWithInjectConstructor implements Component {
 
 class DependencyWithComponentInjected implements Dependency {
 
-    private Component component;
+    private InjectionTest.Component component;
 
     @Inject
-    public DependencyWithComponentInjected(Component component) {
+    public DependencyWithComponentInjected(InjectionTest.Component component) {
         this.component = component;
     }
 }
@@ -313,10 +313,10 @@ class DependencyDependentOnAnotherDependency implements Dependency {
 
 class AnotherDependencyDependentOnComponent implements AnotherDependency {
 
-    private Component component;
+    private InjectionTest.Component component;
 
     @Inject
-    public AnotherDependencyDependentOnComponent(Component component) {
+    public AnotherDependencyDependentOnComponent(InjectionTest.Component component) {
         this.component = component;
     }
 }

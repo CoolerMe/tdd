@@ -3,7 +3,7 @@ package com.coolme.di;
 import jakarta.inject.Inject;
 
 // happy path
-class ComponentWithInjectFiled implements Component {
+class ComponentWithInjectFiled implements InjectionTest.Component {
 
     @Inject
     Dependency dependency;
@@ -13,7 +13,7 @@ class SubComponentWithInjectFiled extends ComponentWithInjectFiled {
 
 }
 
-class ComponentWithInjectMethod implements Component {
+class ComponentWithInjectMethod implements InjectionTest.Component {
 
     boolean called = false;
 
@@ -23,7 +23,7 @@ class ComponentWithInjectMethod implements Component {
     }
 }
 
-class ComponentWithInjectMethodAndDependency implements Component {
+class ComponentWithInjectMethodAndDependency implements InjectionTest.Component {
 
     Dependency dependency;
 
