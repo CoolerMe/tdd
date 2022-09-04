@@ -2,21 +2,28 @@ package com.coolme.di;
 
 public class DependencyNotFoundException extends RuntimeException {
 
+    private Component component;
 
-    private final Class<?> dependency;
-    private final Class<?> component;
+    private Component dependency;
 
-    public DependencyNotFoundException(Class<?> component, Class<?> dependency) {
-        this.dependency = dependency;
+    public DependencyNotFoundException(Component component, Component dependency) {
         this.component = component;
+        this.dependency = dependency;
     }
 
-    public Class<?> getDependency() {
-        return dependency;
-    }
-
-    public Class<?> getComponent() {
+    public Component getComponent() {
         return component;
     }
 
+    public Component getDependency() {
+        return dependency;
+    }
+
+    @Override
+    public String toString() {
+        return "DependencyNotFoundException{" +
+                "component=" + component +
+                ", dependency=" + dependency +
+                '}';
+    }
 }

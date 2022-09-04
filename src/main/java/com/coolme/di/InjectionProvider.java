@@ -1,16 +1,21 @@
 package com.coolme.di;
 
 import jakarta.inject.Inject;
+import jakarta.inject.Qualifier;
 
+import java.lang.annotation.Annotation;
 import java.lang.reflect.*;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 import java.util.function.BiFunction;
 import java.util.stream.Stream;
 
 import static java.util.Arrays.stream;
 import static java.util.stream.Stream.concat;
 
-class InjectionProvider<T> implements ComponentProvider<T> {
+class InjectionProvider<T> implements Provider<T> {
 
     private final Constructor<T> constructor;
     private final List<Field> fields;
@@ -47,11 +52,18 @@ class InjectionProvider<T> implements ComponentProvider<T> {
 
 
     @Override
-    public List<Context.Ref> getDependenciesRef() {
-        return concat(concat(stream(constructor.getParameters()).map(Parameter::getParameterizedType)
-                        , fields.stream().map(Field::getGenericType)),
-                methods.stream().flatMap(m -> stream(m.getParameters()).map(Parameter::getParameterizedType)))
-                .toList().stream().map(Context.Ref::of).toList();
+    public List<ComponentRef> getDependencies() {
+        return concat(concat(stream(constructor.getParameters()).map(this::toComponentRef)
+                        , fields.stream().map(field -> ComponentRef.of(field.getGenericType()))),
+                methods.stream().flatMap(m -> stream(m.getParameters()).map(this::toComponentRef)))
+                .toList();
+    }
+
+    private ComponentRef<?> toComponentRef(Parameter parameter) {
+        Annotation qualifier = stream(parameter.getAnnotations())
+                .filter(annotation -> annotation.annotationType().isAnnotationPresent(Qualifier.class))
+                .findFirst().orElse(null);
+        return ComponentRef.of(parameter.getParameterizedType(), qualifier);
     }
 
 
@@ -156,7 +168,7 @@ class InjectionProvider<T> implements ComponentProvider<T> {
     }
 
     private static Object toDependency(Context context, Type type) {
-        return ((Optional) context.get(Context.Ref.of(type))).get();
+        return context.get(ComponentRef.of(type)).get();
     }
 
 

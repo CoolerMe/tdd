@@ -2,10 +2,10 @@ package com.coolme.di;
 
 import java.util.List;
 
-interface ComponentProvider<T> {
+interface Provider<T> {
     T get(Context context);
 
-    default List<Context.Ref> getDependenciesRef() {
+    default List<ComponentRef> getDependencies() {
         return List.of();
     }
 

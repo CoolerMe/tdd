@@ -1,6 +1,7 @@
 package com.coolme.di;
 
 import jakarta.inject.Inject;
+import jakarta.inject.Named;
 import jakarta.inject.Provider;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
@@ -29,9 +30,9 @@ public class InjectionTest {
     public void setup() throws NoSuchFieldException {
 
         parameterizedType = (ParameterizedType) InjectionTest.class.getDeclaredField("dependencyProvider").getGenericType();
-        when((Optional) context.get(eq(Context.Ref.of(Dependency.class, null))))
+        when((Optional) context.get(eq(ComponentRef.of(Dependency.class, null))))
                 .thenReturn(Optional.of(dependency));
-        when(context.get(eq(Context.Ref.of(parameterizedType))))
+        when(context.get(eq(ComponentRef.of(parameterizedType))))
                 .thenReturn(Optional.of(dependencyProvider));
     }
 
@@ -62,9 +63,9 @@ public class InjectionTest {
         public void should_get_dependency_type_from_inject_constructor() {
             InjectionProvider<ProviderInjectConstructor> provider = new InjectionProvider<>(ProviderInjectConstructor.class);
 
-            List<Context.Ref> types = provider.getDependenciesRef();
+            List<ComponentRef> types = provider.getDependencies();
 
-            assertArrayEquals(types.toArray(Context.Ref[]::new), new Context.Ref[]{Context.Ref.of(parameterizedType)});
+            assertArrayEquals(types.toArray(ComponentRef[]::new), new ComponentRef[]{ComponentRef.of(parameterizedType)});
         }
 
 
@@ -148,7 +149,7 @@ public class InjectionTest {
         public void should_include_field_dependency_in_dependencies() {
             InjectionProvider<ComponentWithInjectFiled> provider = new InjectionProvider<>(ComponentWithInjectFiled.class);
 
-            assertArrayEquals(new Context.Ref[]{Context.Ref.of(Dependency.class, null)}, provider.getDependenciesRef().toArray());
+            assertArrayEquals(new ComponentRef[]{ComponentRef.of(Dependency.class, null)}, provider.getDependencies().toArray());
         }
 
         @Test
@@ -228,7 +229,7 @@ public class InjectionTest {
         public void should_include_method_dependency_in_dependencies() {
             InjectionProvider<ComponentWithInjectMethodAndDependency> provider = new InjectionProvider<>(ComponentWithInjectMethodAndDependency.class);
 
-            assertArrayEquals(new Context.Ref[]{Context.Ref.of(Dependency.class, null)}, provider.getDependenciesRef().toArray());
+            assertArrayEquals(new ComponentRef[]{ComponentRef.of(Dependency.class, null)}, provider.getDependencies().toArray());
         }
 
 
@@ -289,6 +290,30 @@ public class InjectionTest {
             assertEquals(0, component.superCalled);
         }
 
+        // TODO inject with qualifier
+//        static class
+
+    }
+
+    @Nested
+    public class WithQualifier {
+        static class InjectConstructor {
+
+            @Inject
+            public InjectConstructor(@Named("ChooseOne") Dependency dependency) {
+
+            }
+        }
+
+        // TODO should_throw_exception_if_qualified_dependency_not_found
+        @Test
+        public void should_throw_exception_if_qualified_dependency_not_found() {
+            InjectionProvider<InjectConstructor> provider = new InjectionProvider<>(InjectConstructor.class);
+
+            assertArrayEquals(new ComponentRef<?>[]{
+                    new ComponentRef<>(Dependency.class, new ContainerTest.DependencyInject.NamedLiteral("ChooseOne"))
+            }, provider.getDependencies().toArray());
+        }
     }
 
     static interface Component {
