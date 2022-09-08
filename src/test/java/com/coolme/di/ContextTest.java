@@ -5,6 +5,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
+import java.util.Optional;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 class ContextTest {
@@ -21,12 +23,20 @@ class ContextTest {
         Component instance = new Component() {
         };
         context.bind(Component.class, instance);
-        Component component = context.get(Component.class);
+        Component component = context.get(Component.class).get();
 
         assertSame(component, instance);
     }
+
     // TODO abstract class
     // TODO final class
+    //  get component
+    @Test
+    public void should_get_null_if_component_not_bind() {
+        Optional<Component> component = context.get(Component.class);
+
+        assertTrue(component.isEmpty());
+    }
 
     @Nested
     public class ConstructionInjection {
@@ -35,7 +45,7 @@ class ContextTest {
         public void should_bind_class_with_default_constructor() {
             context.bind(Component.class, ComponentWithDefaultConstructor.class);
 
-            Component component = context.get(Component.class);
+            Component component = context.get(Component.class).get();
 
             assertNotNull(component);
             assertTrue(component instanceof ComponentWithDefaultConstructor);
@@ -50,7 +60,7 @@ class ContextTest {
             context.bind(Dependency.class, dependency);
             context.bind(Component.class, ComponentWithInjectConstructor.class);
 
-            Component component = context.get(Component.class);
+            Component component = context.get(Component.class).get();
 
             assertSame(((ComponentWithInjectConstructor) component).getDependency(), dependency);
         }
@@ -63,7 +73,7 @@ class ContextTest {
             context.bind(Dependency.class, DependencyWithInjectConstructor.class);
             context.bind(Component.class, ComponentWithInjectConstructor.class);
 
-            Component component = context.get(Component.class);
+            Component component = context.get(Component.class).get();
             assertNotNull(component);
             ComponentWithInjectConstructor componentWithInjectConstructor = (ComponentWithInjectConstructor) component;
 
@@ -80,11 +90,27 @@ class ContextTest {
                     () -> context.bind(Component.class, ComponentWithMultiInjectConstructors.class));
         }
 
-        // TODO no inject constructor nor default constructor
+        //  no inject constructor nor default constructor
         @Test
         public void should_throw_exception_if_nor_inject_nor_default_constructor_provided() {
             assertThrows(IllegalComponentException.class,
                     () -> context.bind(Component.class, ComponentWithNoInjectNorDefaultConstructor.class));
+        }
+
+        @Test
+        public void should_throw_exception_if_no_component_found() {
+            context.bind(Component.class, ComponentWithInjectConstructor.class);
+
+            assertThrows(DependencyNotFoundException.class, () -> context.get(Component.class));
+        }
+
+        // TODO cyclic dependencies
+        @Test
+        public void should_exception_if_cyclic_dependencies_found() {
+            context.bind(Component.class, ComponentWithInjectConstructor.class);
+            context.bind(Dependency.class, DependencyWithComponent.class);
+
+            assertThrows(CyclicDependenciesException.class, () -> context.get(Component.class));
         }
     }
 
@@ -143,6 +169,19 @@ class ComponentWithInjectConstructor implements Component {
 
     public Dependency getDependency() {
         return dependency;
+    }
+}
+
+class DependencyWithComponent implements Dependency {
+    private Component component;
+
+    @Inject
+    public DependencyWithComponent(Component component) {
+        this.component = component;
+    }
+
+    public Component getComponent() {
+        return component;
     }
 }
 

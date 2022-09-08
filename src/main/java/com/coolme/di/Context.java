@@ -5,9 +5,7 @@ import jakarta.inject.Provider;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 public class Context {
 
@@ -17,29 +15,15 @@ public class Context {
         providers.put(type, () -> instance);
     }
 
-    public <T> T get(Class<T> type) {
-        return (T) providers.get(type).get();
-    }
 
     public <T, I extends T> void bind(Class<T> componentType, Class<I> implementation) {
-        Constructor<?>[] injectConstructors = Arrays.stream(implementation.getConstructors())
-                .filter(constructor -> constructor.isAnnotationPresent(Inject.class))
-                .toArray(Constructor<?>[]::new);
-
-        if (injectConstructors.length > 1) {
-            throw new IllegalComponentException();
-        }
-
-        if (injectConstructors.length == 0 && Arrays.stream(implementation.getConstructors())
-                .anyMatch(constructor -> constructor.getParameters().length > 0)) {
-            throw new IllegalComponentException();
-        }
+        Constructor<I> constructor = getConstructor(implementation);
 
         providers.put(componentType, (Provider<I>) () -> {
             try {
-                Constructor<I> constructor = getConstructor(implementation);
+
                 Object[] dependencies = Arrays.stream(constructor.getParameters())
-                        .map(parameter -> get(parameter.getType()))
+                        .map(parameter -> get(parameter.getType()).orElseThrow(DependencyNotFoundException::new))
                         .toArray(Object[]::new);
                 return (I) constructor.newInstance(dependencies);
             } catch (InstantiationException | IllegalAccessException | InvocationTargetException e) {
@@ -49,16 +33,26 @@ public class Context {
     }
 
     private static <I> Constructor<I> getConstructor(Class<I> implementation) {
-        return (Constructor<I>) Arrays.stream(implementation.getConstructors())
-                .filter(constructor -> constructor.isAnnotationPresent(Inject.class))
+        List<Constructor<?>> injectConstructors = Arrays.stream(implementation.getConstructors())
+                .filter(constructor -> constructor.isAnnotationPresent(Inject.class)).toList();
+
+        if (injectConstructors.size() > 1) {
+            throw new IllegalComponentException();
+        }
+        return (Constructor<I>) injectConstructors.stream()
                 .findFirst()
                 .orElseGet(() -> {
                     try {
                         return implementation.getConstructor();
                     } catch (NoSuchMethodException e) {
-                        throw new RuntimeException(e);
+                        throw new IllegalComponentException();
                     }
                 });
 
     }
+
+    public <T> Optional<T> get(Class<T> componentClass) {
+        return Optional.ofNullable(providers.get(componentClass)).map(provider -> (T) provider.get());
+    }
+
 }
