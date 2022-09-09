@@ -18,18 +18,43 @@ public class Context {
 
     public <T, I extends T> void bind(Class<T> componentType, Class<I> implementation) {
         Constructor<I> constructor = getConstructor(implementation);
+        providers.put(componentType, new ComponentInjectionProvider<>(constructor, componentType));
+    }
 
-        providers.put(componentType, (Provider<I>) () -> {
+    public <T> Optional<T> get(Class<T> componentClass) {
+        return Optional.ofNullable(providers.get(componentClass)).map(provider -> (T) provider.get());
+    }
+
+    class ComponentInjectionProvider<T> implements Provider<T> {
+        private final Constructor<T> constructor;
+        private final Class<?> componentType;
+        private boolean constructing = false;
+
+        public ComponentInjectionProvider(Constructor<T> constructor, Class<?> componentType) {
+            this.constructor = constructor;
+            this.componentType = componentType;
+        }
+
+        @Override
+        public T get() {
+            if (constructing) {
+                throw new CyclicDependenciesException(componentType);
+            }
             try {
-
+                constructing = true;
                 Object[] dependencies = Arrays.stream(constructor.getParameters())
-                        .map(parameter -> get(parameter.getType()).orElseThrow(DependencyNotFoundException::new))
+                        .map(parameter -> Context.this.get(parameter.getType())
+                                .orElseThrow(() -> new DependencyNotFoundException(componentType, parameter.getType())))
                         .toArray(Object[]::new);
-                return (I) constructor.newInstance(dependencies);
+                return constructor.newInstance(dependencies);
+            } catch (CyclicDependenciesException e) {
+                throw new CyclicDependenciesException(componentType, e);
             } catch (InstantiationException | IllegalAccessException | InvocationTargetException e) {
                 throw new RuntimeException(e);
+            } finally {
+                constructing = false;
             }
-        });
+        }
     }
 
     private static <I> Constructor<I> getConstructor(Class<I> implementation) {
@@ -51,8 +76,5 @@ public class Context {
 
     }
 
-    public <T> Optional<T> get(Class<T> componentClass) {
-        return Optional.ofNullable(providers.get(componentClass)).map(provider -> (T) provider.get());
-    }
 
 }
