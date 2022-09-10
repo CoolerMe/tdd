@@ -108,7 +108,7 @@ class ContainerTest {
         }
 
         @Test
-        public void should_throw_exception_if_transitive_dependencies_not_found() {
+        public void should_throw_exception_if_dependencies_not_found() {
             config.bind(Component.class, ComponentWithDependency.class);
             config.bind(Dependency.class, DependencyWithInjectConstructor.class);
 
@@ -118,6 +118,15 @@ class ContainerTest {
             assertEquals(String.class, exception.getParameterType());
         }
 
+        @Test
+        public void should_throw_exception_if_transitive_dependencies_not_found() {
+            config.bind(Component.class, ComponentWithDependency.class);
+            config.bind(Dependency.class, DependencyWithAnotherDependency.class);
+            config.bind(AnotherDependency.class, AnotherDependencyWithContent.class);
+
+            assertThrows(DependencyNotFoundException.class, () -> config.getContext());
+        }
+
         //  cyclic dependencies
         @Test
         public void should_exception_if_cyclic_dependencies_found() {
@@ -125,7 +134,7 @@ class ContainerTest {
             config.bind(Dependency.class, DependencyWithComponent.class);
 
             CyclicDependenciesException exception = assertThrows(CyclicDependenciesException.class,
-                    () -> config.getContext().get(Component.class));
+                    () -> config.getContext());
 
             Set<Class<?>> components = exception.getComponents();
 
@@ -143,7 +152,7 @@ class ContainerTest {
             config.bind(AnotherDependency.class, AnotherDependencyWithComponent.class);
 
             CyclicDependenciesException exception = assertThrows(CyclicDependenciesException.class,
-                    () -> config.getContext().get(Component.class));
+                    () -> config.getContext());
             Set<Class<?>> components = exception.getComponents();
             assertEquals(3, components.size());
             assertTrue(components.contains(Component.class));
@@ -175,6 +184,15 @@ interface Dependency {
 
 interface AnotherDependency {
 
+}
+
+class AnotherDependencyWithContent implements AnotherDependency {
+    private String content;
+
+    @Inject
+    public AnotherDependencyWithContent(String content) {
+        this.content = content;
+    }
 }
 
 class ComponentWithNoInjectNorDefaultConstructor implements Component {
