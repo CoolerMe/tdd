@@ -2,24 +2,48 @@ package com.coolme.di;
 
 import jakarta.inject.Inject;
 
-import java.lang.reflect.Constructor;
-import java.lang.reflect.Field;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Parameter;
+import java.lang.reflect.*;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+
+import static java.util.stream.Stream.*;
 
 class ComponentInjectionProvider<T> implements ComponentProvider<T> {
     private final Constructor<T> constructor;
 
     private final List<Field> injectFields;
 
+    private final List<Method> injectMethods;
+
     public ComponentInjectionProvider(Class<T> implementation) {
         this.constructor = getConstructor(implementation);
         this.injectFields = getInjectFields(implementation);
+        this.injectMethods = getInjectMethods(implementation);
+    }
+
+    private List<Method> getInjectMethods(Class<T> implementation) {
+        List<Method> methods = new ArrayList<>();
+        Class<?> current = implementation;
+        while (current != Object.class) {
+            methods.addAll(
+                    Arrays.stream(current.getDeclaredMethods())
+                            .filter(method -> method.isAnnotationPresent(Inject.class))
+                            .filter(method -> methods.stream().noneMatch(item -> method.getName().equals(item.getName())
+                                    && Arrays.equals(item.getParameterTypes(), method.getParameterTypes())))
+                            .filter(method -> Arrays.stream(implementation.getDeclaredMethods())
+                                    .filter(method1 -> !method1.isAnnotationPresent(Inject.class))
+                                    .noneMatch(item -> method.getName().equals(item.getName())
+                                            && Arrays.equals(item.getParameterTypes(), method.getParameterTypes())))
+                            .toList());
+            current = current.getSuperclass();
+        }
+        Collections.reverse(methods);
+
+        return methods;
     }
 
     private List<Field> getInjectFields(Class<T> implementation) {
@@ -65,6 +89,13 @@ class ComponentInjectionProvider<T> implements ComponentProvider<T> {
             for (Field field : injectFields) {
                 field.set(t, context.get(field.getType()).get());
             }
+
+            for (Method method : injectMethods) {
+                method.setAccessible(true);
+                method.invoke(t, Arrays.stream(method.getParameterTypes())
+                        .map(type -> context.get(type).get())
+                        .toArray(Object[]::new));
+            }
             return t;
         } catch (InstantiationException | IllegalAccessException | InvocationTargetException e) {
             throw new RuntimeException(e);
@@ -75,7 +106,9 @@ class ComponentInjectionProvider<T> implements ComponentProvider<T> {
     public List<Class<?>> getDependencies() {
         Stream<? extends Class<?>> constructorStream = Arrays.stream(constructor.getParameters()).map(Parameter::getType);
         Stream<? extends Class<?>> classStream = injectFields.stream().map(Field::getType);
-        return Stream.concat(constructorStream, classStream)
+        Stream<Class<?>> stream = injectMethods.stream()
+                .flatMap(method -> Arrays.stream(method.getParameterTypes()));
+        return Stream.concat(stream, concat(constructorStream, classStream))
                 .collect(Collectors.toList());
     }
 }
