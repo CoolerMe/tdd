@@ -5,6 +5,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
@@ -165,6 +166,38 @@ class ContainerTest {
     @Nested
     public class FieldInjection {
 
+        @Test
+        public void should_inject_dependency_via_field() {
+            Dependency dependency = new Dependency() {
+            };
+            config.bind(Dependency.class, dependency);
+            config.bind(Component.class, ComponentWithFieldInjection.class);
+
+            ComponentWithFieldInjection component = (ComponentWithFieldInjection) config.getContext().get(Component.class).get();
+
+            assertSame(dependency, component.dependency);
+        }
+
+        @Test
+        public void should_inject_dependency_via_super_class_inject_field() {
+            Dependency dependency = new Dependency() {
+            };
+            config.bind(Dependency.class, dependency);
+            config.bind(Component.class, SuperClassWithFieldInjection.class);
+
+            SuperClassWithFieldInjection component = (SuperClassWithFieldInjection) config.getContext().get(Component.class).get();
+
+            assertSame(dependency, component.dependency);
+        }
+
+        @Test
+        public void should_include_field_dependency_in_dependencies() {
+            ComponentInjectionProvider<ComponentWithFieldInjection> component = new ComponentInjectionProvider<>(ComponentWithFieldInjection.class);
+            List<Class<?>> dependencies = component.getDependencies();
+
+            assertArrayEquals(new Class<?>[]{Dependency.class}, dependencies.toArray(Class<?>[]::new));
+
+        }
     }
 
     @Nested
@@ -183,6 +216,16 @@ interface Dependency {
 }
 
 interface AnotherDependency {
+
+}
+
+class ComponentWithFieldInjection implements Component {
+
+    @Inject
+    Dependency dependency;
+}
+
+class SuperClassWithFieldInjection extends ComponentWithFieldInjection {
 
 }
 
