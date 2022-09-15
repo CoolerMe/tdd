@@ -20,9 +20,22 @@ class ComponentInjectionProvider<T> implements ComponentProvider<T> {
     private final List<Method> injectMethods;
 
     public ComponentInjectionProvider(Class<T> implementation) {
+        if (Modifier.isAbstract(implementation.getModifiers())) {
+            throw new IllegalComponentException();
+        }
         this.constructor = getConstructor(implementation);
         this.injectFields = getInjectFields(implementation);
         this.injectMethods = getInjectMethods(implementation);
+
+        boolean anyFinal = injectFields.stream().anyMatch(field -> Modifier.isFinal(field.getModifiers()));
+        if (anyFinal) {
+            throw new IllegalComponentException();
+        }
+
+        boolean anyParameterized = injectMethods.stream().anyMatch(method -> method.getTypeParameters().length > 0);
+        if (anyParameterized) {
+            throw new IllegalComponentException();
+        }
     }
 
     private List<Method> getInjectMethods(Class<T> implementation) {
