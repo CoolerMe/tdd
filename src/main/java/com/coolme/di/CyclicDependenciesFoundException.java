@@ -2,10 +2,11 @@ package com.coolme.di;
 
 import java.util.*;
 
-public class CyclicDependenciesException extends RuntimeException {
+public class CyclicDependenciesFoundException extends RuntimeException {
+
     private final List<Class<?>> components = new ArrayList<>();
 
-    public CyclicDependenciesException(Stack<Class<?>> visiting) {
+    public CyclicDependenciesFoundException(Stack<Class<?>> visiting) {
         components.addAll(visiting);
     }
 

@@ -1,51 +1,52 @@
 package com.coolme.di;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Stack;
+import java.util.*;
+import static java.util.List.of;
 
 public class ContextConfig {
+    private Map<Class<?>, ComponentProvider<?>> providers = new HashMap<>();
 
-    private final Map<Class<?>, ComponentProvider<?>> componentProviders = new HashMap<>();
-
-
-    public <T> void bind(Class<T> type, T instance) {
-        componentProviders.put(type, context -> instance);
-
+    public <Type> void bind(Class<Type> type, Type instance) {
+        providers.put(type, new ComponentProvider<Type>() {
+            @Override
+            public Type get(Context context) {
+                return instance;
+            }
+            @Override
+            public List<Class<?>> getDependencies() {
+                return of();
+            }
+        });
     }
 
-    public <T, I extends T> void bind(Class<T> componentType, Class<I> implementation) {
-        componentProviders.put(componentType, new ComponentInjectionProvider<>(implementation));
+    public <Type, Implementation extends Type>
+    void bind(Class<Type> type, Class<Implementation> implementation) {
+        providers.put(type, new ConstructorInjectionProvider<>(implementation));
     }
 
     public Context getContext() {
-        componentProviders.keySet()
-                .forEach(component -> checkDependencies(component, new Stack<>()));
-
+        providers.keySet().forEach(component -> checkDependencies(component, new Stack<>()));
         return new Context() {
             @Override
-            public <T> Optional<T> get(Class<T> componentClass) {
-                return Optional.ofNullable(componentProviders.get(componentClass)).map(provider -> (T) provider.get(this));
+            public <Type> Optional<Type> get(Class<Type> type) {
+                return Optional.ofNullable(providers.get(type)).map(provider -> (Type) provider.get(this));
             }
         };
     }
 
-    private void checkDependencies(Class<?> componentClass, Stack<Class<?>> visiting) {
-        for (Class<?> dependency : componentProviders.get(componentClass).getDependencies()) {
-
-            if (!componentProviders.containsKey(dependency)) {
-                throw new DependencyNotFoundException(componentClass, dependency);
-            }
-
-            if (visiting.contains(dependency)) {
-                throw new CyclicDependenciesException(visiting);
-            }
+    private void checkDependencies(Class<?> component, Stack<Class<?>> visiting) {
+        for (Class<?> dependency: providers.get(component).getDependencies()) {
+            if (!providers.containsKey(dependency)) throw new DependencyNotFoundException(component, dependency);
+            if (visiting.contains(dependency)) throw new CyclicDependenciesFoundException(visiting);
             visiting.push(dependency);
             checkDependencies(dependency, visiting);
             visiting.pop();
         }
     }
 
-
+    interface ComponentProvider<T> {
+        T get(Context context);
+        List<Class<?>> getDependencies();
+    }
 }
+
